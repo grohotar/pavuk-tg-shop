@@ -43,7 +43,7 @@ class PlategaService:
         self.secret_key: Optional[str] = settings.PLATEGA_SECRET_KEY
         self.default_currency: str = (settings.DEFAULT_CURRENCY_SYMBOL or "RUB").upper()
 
-        self.api_base_url: str = "https://platega.io/api"
+        self.api_base_url: str = "https://platega.io/api/v1"
         self._timeout = ClientTimeout(total=15)
         self._session: Optional[ClientSession] = None
 
