@@ -90,6 +90,8 @@ class PlategaService:
             },
             "description": f"Subscription {months} month(s)",
             "payload": f"user_id:{user_id};months:{months};payment_db_id:{payment_db_id}",
+            "return": "https://t.me",  # Return URL after successful payment
+            "failedUrl": "https://t.me",  # URL for failed payment
         }
 
         session = await self._get_session()
