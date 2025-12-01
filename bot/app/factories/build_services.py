@@ -13,6 +13,7 @@ from bot.services.tribute_service import TributeService
 from bot.services.crypto_pay_service import CryptoPayService
 from bot.services.panel_webhook_service import PanelWebhookService
 from bot.services.freekassa_service import FreeKassaService
+from bot.services.platega_service import PlategaService
 
 
 def build_core_services(
@@ -38,6 +39,14 @@ def build_core_services(
         referral_service,
     )
     freekassa_service = FreeKassaService(
+        bot=bot,
+        settings=settings,
+        i18n=i18n,
+        async_session_factory=async_session_factory,
+        subscription_service=subscription_service,
+        referral_service=referral_service,
+    )
+    platega_service = PlategaService(
         bot=bot,
         settings=settings,
         i18n=i18n,
@@ -80,6 +89,7 @@ def build_core_services(
         "stars_service": stars_service,
         "cryptopay_service": cryptopay_service,
         "freekassa_service": freekassa_service,
+        "platega_service": platega_service,
         "tribute_service": tribute_service,
         "panel_webhook_service": panel_webhook_service,
         "yookassa_service": yookassa_service,

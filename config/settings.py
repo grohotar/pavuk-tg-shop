@@ -63,6 +63,11 @@ class Settings(BaseSettings):
     FREEKASSA_PAYMENT_IP: Optional[str] = None
     FREEKASSA_PAYMENT_METHOD_ID: Optional[int] = None
 
+    PLATEGA_ENABLED: bool = Field(default=False)
+    PLATEGA_MERCHANT_ID: Optional[str] = None
+    PLATEGA_SECRET_KEY: Optional[str] = None
+    PLATEGA_PAYMENT_METHOD_ID: Optional[int] = None
+
     YOOKASSA_ENABLED: bool = Field(default=True)
     STARS_ENABLED: bool = Field(default=True)
     TRIBUTE_ENABLED: bool = Field(default=True)
@@ -292,6 +297,19 @@ class Settings(BaseSettings):
         base = self.WEBHOOK_BASE_URL
         if base:
             return f"{base.rstrip('/')}{self.freekassa_webhook_path}"
+        return None
+
+    @computed_field
+    @property
+    def platega_webhook_path(self) -> str:
+        return "/webhook/platega"
+
+    @computed_field
+    @property
+    def platega_full_webhook_url(self) -> Optional[str]:
+        base = self.WEBHOOK_BASE_URL
+        if base:
+            return f"{base.rstrip('/')}{self.platega_webhook_path}"
         return None
 
     # Computed YooKassa receipt fields based on recurring toggle

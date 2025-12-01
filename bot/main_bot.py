@@ -200,6 +200,7 @@ async def on_shutdown_configured(dispatcher: Dispatcher):
         "panel_service",
         "cryptopay_service",
         "freekassa_service",
+        "platega_service",
         "tribute_service",
         "panel_webhook_service",
         "yookassa_service",
