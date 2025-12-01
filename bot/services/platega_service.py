@@ -212,13 +212,33 @@ class PlategaService:
             logging.error(f"Platega webhook: failed to read JSON: {e}")
             return web.Response(status=400, text="bad_request")
 
+        # Log incoming webhook data for debugging
+        logging.info(f"Platega webhook received payload: {payload}")
+
+        # Platega callback format: id, amount, currency, status, paymentMethod
         transaction_id = payload.get("id")
         status = payload.get("status")
-        order_id_str = payload.get("orderId")
-        amount_str = payload.get("amount")
+        amount_value = payload.get("amount")
+        
+        # Try to extract payment_db_id from 'payload' field (our custom data)
+        custom_payload = payload.get("payload", "")
+        order_id_str = None
+        if custom_payload:
+            # Parse "user_id:123;months:1;payment_db_id:456"
+            for part in str(custom_payload).split(";"):
+                if part.startswith("payment_db_id:"):
+                    order_id_str = part.split(":")[1]
+                    break
+        
+        # If no custom payload, try to find payment by transaction_id
+        if not order_id_str and transaction_id:
+            # We'll look up by provider_payment_id later
+            order_id_str = None
+        
+        amount_str = str(amount_value) if amount_value else None
 
-        if not transaction_id or not status or not order_id_str:
-            logging.error("Platega webhook: missing required fields")
+        if not transaction_id or not status:
+            logging.error(f"Platega webhook: missing required fields. transaction_id={transaction_id}, status={status}")
             return web.Response(status=400, text="missing_data")
 
         # Only process CONFIRMED payments
@@ -226,16 +246,23 @@ class PlategaService:
             logging.info(f"Platega webhook: payment {transaction_id} status is {status}, ignoring")
             return web.Response(text="OK")
 
-        try:
-            payment_db_id = int(order_id_str)
-        except (TypeError, ValueError):
-            logging.error(f"Platega webhook: invalid order_id value '{order_id_str}'")
-            return web.Response(status=400, text="invalid_order_id")
-
         async with self.async_session_factory() as session:
-            payment = await payment_dal.get_payment_by_db_id(session, payment_db_id)
+            payment = None
+            
+            # First try to find by order_id if available
+            if order_id_str:
+                try:
+                    payment_db_id = int(order_id_str)
+                    payment = await payment_dal.get_payment_by_db_id(session, payment_db_id)
+                except (TypeError, ValueError):
+                    logging.warning(f"Platega webhook: invalid order_id value '{order_id_str}'")
+            
+            # If not found, try to find by provider_payment_id (transaction_id)
             if not payment:
-                logging.error(f"Platega webhook: payment {payment_db_id} not found")
+                payment = await payment_dal.get_payment_by_provider_payment_id(session, str(transaction_id))
+            
+            if not payment:
+                logging.error(f"Platega webhook: payment not found for transaction_id={transaction_id}, order_id={order_id_str}")
                 return web.Response(status=404, text="payment_not_found")
 
             if payment.status == "succeeded":
