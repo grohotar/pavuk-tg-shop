@@ -43,7 +43,7 @@ class PlategaService:
         self.secret_key: Optional[str] = settings.PLATEGA_SECRET_KEY
         self.default_currency: str = (settings.DEFAULT_CURRENCY_SYMBOL or "RUB").upper()
 
-        self.api_base_url: str = "https://platega.io/api/v1"
+        self.api_base_url: str = "https://app.platega.io"
         self._timeout = ClientTimeout(total=15)
         self._session: Optional[ClientSession] = None
 
@@ -78,26 +78,22 @@ class PlategaService:
             return False, {"message": "service_not_configured"}
 
         currency_code = (currency or self.default_currency or "RUB").upper()
-        amount_str = self._format_amount(amount)
+        # Amount should be integer (in smallest currency unit or whole units)
+        amount_int = int(amount)
 
-        # Prepare request payload
+        # Prepare request payload according to Platega API docs
         payload: Dict[str, Any] = {
-            "amount": amount_str,
-            "currency": currency_code,
-            "orderId": str(payment_db_id),
-            "description": f"Subscription {months} month(s)",
-            "metadata": {
-                "user_id": str(user_id),
-                "months": str(months),
-                "payment_db_id": str(payment_db_id),
+            "paymentMethod": payment_method or 2,  # Default to SBP (2)
+            "paymentDetails": {
+                "amount": amount_int,
+                "currency": currency_code,
             },
+            "description": f"Subscription {months} month(s)",
+            "payload": f"user_id:{user_id};months:{months};payment_db_id:{payment_db_id}",
         }
 
-        if payment_method:
-            payload["paymentMethod"] = payment_method
-
         session = await self._get_session()
-        url = f"{self.api_base_url}/transactions"
+        url = f"{self.api_base_url}/transaction/process"
 
         headers = {
             "X-MerchantId": self.merchant_id,
@@ -137,7 +133,7 @@ class PlategaService:
             return False, {"message": "service_not_configured"}
 
         session = await self._get_session()
-        url = f"{self.api_base_url}/transactions/{transaction_id}"
+        url = f"{self.api_base_url}/transaction/{transaction_id}"
 
         headers = {
             "X-MerchantId": self.merchant_id,
