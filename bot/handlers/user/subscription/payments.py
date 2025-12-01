@@ -1078,8 +1078,8 @@ async def pay_platega_callback_handler(
     )
 
     if success:
-        payment_url = response_data.get("paymentUrl")
-        transaction_id = response_data.get("id")
+        payment_url = response_data.get("redirect")  # Platega returns 'redirect' field
+        transaction_id = response_data.get("transactionId")  # Platega returns 'transactionId'
 
         if transaction_id:
             try:
