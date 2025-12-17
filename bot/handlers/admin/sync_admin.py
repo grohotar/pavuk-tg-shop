@@ -251,9 +251,9 @@ async def perform_sync(
                             if existing_sub_by_uuid:
                                 # Atomic update of all relevant fields
                                 # Support new userTraffic structure (v2.3.0+)
-                                user_traffic = panel_user.get("userTraffic", {})
-                                traffic_used = user_traffic.get("usedTrafficBytes") or panel_user.get("usedTrafficBytes")
-                                traffic_limit = panel_user.get("trafficLimitBytes")
+                                user_traffic = panel_user_dict.get("userTraffic", {})
+                                traffic_used = user_traffic.get("usedTrafficBytes") or panel_user_dict.get("usedTrafficBytes")
+                                traffic_limit = panel_user_dict.get("trafficLimitBytes")
                                 
                                 update_payload = {
                                     "user_id": actual_user_id,
@@ -314,9 +314,9 @@ async def perform_sync(
                             )
                             if active_sub:
                                 # Support new userTraffic structure (v2.3.0+)
-                                user_traffic = panel_user.get("userTraffic", {})
-                                traffic_used = user_traffic.get("usedTrafficBytes") or panel_user.get("usedTrafficBytes")
-                                traffic_limit = panel_user.get("trafficLimitBytes")
+                                user_traffic = panel_user_dict.get("userTraffic", {})
+                                traffic_used = user_traffic.get("usedTrafficBytes") or panel_user_dict.get("usedTrafficBytes")
+                                traffic_limit = panel_user_dict.get("trafficLimitBytes")
                                 
                                 update_payload = {
                                     "end_date": panel_expire_at,
