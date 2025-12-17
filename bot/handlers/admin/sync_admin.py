@@ -250,16 +250,28 @@ async def perform_sync(
 
                             if existing_sub_by_uuid:
                                 # Atomic update of all relevant fields
+                                # Support new userTraffic structure (v2.3.0+)
+                                user_traffic = panel_user.get("userTraffic", {})
+                                traffic_used = user_traffic.get("usedTrafficBytes") or panel_user.get("usedTrafficBytes")
+                                traffic_limit = panel_user.get("trafficLimitBytes")
+                                
+                                update_payload = {
+                                    "user_id": actual_user_id,
+                                    "panel_user_uuid": panel_uuid,
+                                    "end_date": panel_expire_at,
+                                    "is_active": panel_status == "ACTIVE",
+                                    "status_from_panel": panel_status,
+                                }
+                                
+                                if traffic_used is not None:
+                                    update_payload["traffic_used_bytes"] = traffic_used
+                                if traffic_limit is not None:
+                                    update_payload["traffic_limit_bytes"] = traffic_limit
+                                
                                 await subscription_dal.update_subscription(
                                     session,
                                     existing_sub_by_uuid.subscription_id,
-                                    {
-                                        "user_id": actual_user_id,
-                                        "panel_user_uuid": panel_uuid,
-                                        "end_date": panel_expire_at,
-                                        "is_active": panel_status == "ACTIVE",
-                                        "status_from_panel": panel_status,
-                                    },
+                                    update_payload,
                                 )
                                 subscriptions_synced_count += 1
                                 subscriptions_updated += 1
@@ -301,14 +313,26 @@ async def perform_sync(
                                 )
                             )
                             if active_sub:
+                                # Support new userTraffic structure (v2.3.0+)
+                                user_traffic = panel_user.get("userTraffic", {})
+                                traffic_used = user_traffic.get("usedTrafficBytes") or panel_user.get("usedTrafficBytes")
+                                traffic_limit = panel_user.get("trafficLimitBytes")
+                                
+                                update_payload = {
+                                    "end_date": panel_expire_at,
+                                    "is_active": panel_status == "ACTIVE",
+                                    "status_from_panel": panel_status,
+                                }
+                                
+                                if traffic_used is not None:
+                                    update_payload["traffic_used_bytes"] = traffic_used
+                                if traffic_limit is not None:
+                                    update_payload["traffic_limit_bytes"] = traffic_limit
+                                
                                 await subscription_dal.update_subscription(
                                     session,
                                     active_sub.subscription_id,
-                                    {
-                                        "end_date": panel_expire_at,
-                                        "is_active": panel_status == "ACTIVE",
-                                        "status_from_panel": panel_status,
-                                    },
+                                    update_payload,
                                 )
                                 subscriptions_synced_count += 1
                                 subscriptions_updated += 1
