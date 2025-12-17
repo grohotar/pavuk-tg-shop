@@ -717,7 +717,10 @@ class SubscriptionService:
             update_payload_local = {}
             panel_status = panel_user_data.get("status", "UNKNOWN").upper()
             panel_expire_at_str = panel_user_data.get("expireAt")
-            panel_traffic_used = panel_user_data.get("usedTrafficBytes")
+            
+            # Support new userTraffic structure (v2.3.0+) and old format
+            user_traffic = panel_user_data.get("userTraffic", {})
+            panel_traffic_used = user_traffic.get("usedTrafficBytes") or panel_user_data.get("usedTrafficBytes")
             panel_traffic_limit = panel_user_data.get("trafficLimitBytes")
             panel_sub_uuid_from_panel = panel_user_data.get(
                 "subscriptionUuid"
@@ -775,13 +778,17 @@ class SubscriptionService:
         if hwid_limit is None:
             hwid_limit = self.settings.USER_HWID_DEVICE_LIMIT
 
+        # Support new userTraffic structure (v2.3.0+) and old format
+        user_traffic = panel_user_data.get("userTraffic", {})
+        traffic_used = user_traffic.get("usedTrafficBytes") or panel_user_data.get("usedTrafficBytes")
+        
         return {
             "user_id": panel_user_data.get("uuid"),
             "end_date": panel_end_date,
             "status_from_panel": panel_user_data.get("status", "UNKNOWN").upper(),
             "config_link": panel_user_data.get("subscriptionUrl"),
             "traffic_limit_bytes": panel_user_data.get("trafficLimitBytes"),
-            "traffic_used_bytes": panel_user_data.get("usedTrafficBytes"),
+            "traffic_used_bytes": traffic_used,
             "user_bot_username": db_user.username,
             "is_panel_data": True,
             "max_devices": hwid_limit,
