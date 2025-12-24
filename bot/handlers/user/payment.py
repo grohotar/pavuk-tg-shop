@@ -261,15 +261,25 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
                         elif inviter.username:
                             inviter_name_display = username_for_display(inviter.username, with_at=False)
 
-                details_message = _(
-                    "payment_successful_with_referral_bonus_full",
-                    months=subscription_months,
-                    base_end_date=base_subscription_end_date.strftime('%Y-%m-%d'),
-                    bonus_days=applied_referee_bonus_days_from_referral,
-                    final_end_date=final_end_date_for_user.strftime('%Y-%m-%d'),
-                    inviter_name=inviter_name_display,
-                    config_link=config_link,
-                )
+                if subscription_months == 0:
+                    details_message = _(
+                        "payment_successful_with_referral_bonus_full_week",
+                        base_end_date=base_subscription_end_date.strftime('%Y-%m-%d'),
+                        bonus_days=applied_referee_bonus_days_from_referral,
+                        final_end_date=final_end_date_for_user.strftime('%Y-%m-%d'),
+                        inviter_name=inviter_name_display,
+                        config_link=config_link,
+                    )
+                else:
+                    details_message = _(
+                        "payment_successful_with_referral_bonus_full",
+                        months=subscription_months,
+                        base_end_date=base_subscription_end_date.strftime('%Y-%m-%d'),
+                        bonus_days=applied_referee_bonus_days_from_referral,
+                        final_end_date=final_end_date_for_user.strftime('%Y-%m-%d'),
+                        inviter_name=inviter_name_display,
+                        config_link=config_link,
+                    )
             elif applied_promo_bonus_days > 0 and final_end_date_for_user:
                 details_message = _(
                     "payment_successful_with_promo_full",
@@ -279,12 +289,19 @@ async def process_successful_payment(session: AsyncSession, bot: Bot,
                     config_link=config_link,
                 )
             elif final_end_date_for_user:
-                details_message = _(
-                    "payment_successful_full",
-                    months=subscription_months,
-                    end_date=final_end_date_for_user.strftime('%Y-%m-%d'),
-                    config_link=config_link,
-                )
+                if subscription_months == 0:
+                    details_message = _(
+                        "payment_successful_full_week",
+                        end_date=final_end_date_for_user.strftime('%Y-%m-%d'),
+                        config_link=config_link,
+                    )
+                else:
+                    details_message = _(
+                        "payment_successful_full",
+                        months=subscription_months,
+                        end_date=final_end_date_for_user.strftime('%Y-%m-%d'),
+                        config_link=config_link,
+                    )
             else:
                 logging.error(
                     f"Critical error: final_end_date_for_user is None for user {user_id} after successful payment logic."

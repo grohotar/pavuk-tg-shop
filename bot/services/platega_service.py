@@ -369,12 +369,19 @@ class PlategaService:
                     config_link=config_link,
                 )
             else:
-                text = _(
-                    "payment_successful_full",
-                    months=months,
-                    end_date=end_date_str,
-                    config_link=config_link,
-                )
+                if months == 0:
+                    text = _(
+                        "payment_successful_full_week",
+                        end_date=end_date_str,
+                        config_link=config_link,
+                    )
+                else:
+                    text = _(
+                        "payment_successful_full",
+                        months=months,
+                        end_date=end_date_str,
+                        config_link=config_link,
+                    )
 
             order_info_text = _(
                 "platega_order_full",

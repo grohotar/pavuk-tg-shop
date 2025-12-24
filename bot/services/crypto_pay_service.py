@@ -196,18 +196,31 @@ class CryptoPayService:
                             inviter_name_display = safe_name
                         elif inviter.username:
                             inviter_name_display = username_for_display(inviter.username, with_at=False)
-                text = _("payment_successful_with_referral_bonus_full",
-                         months=months,
-                         base_end_date=activation["end_date"].strftime('%Y-%m-%d'),
-                         bonus_days=applied_days,
-                         final_end_date=final_end.strftime('%Y-%m-%d'),
-                         inviter_name=inviter_name_display,
-                         config_link=config_link)
+                if months == 0:
+                    text = _("payment_successful_with_referral_bonus_full_week",
+                             base_end_date=activation["end_date"].strftime('%Y-%m-%d'),
+                             bonus_days=applied_days,
+                             final_end_date=final_end.strftime('%Y-%m-%d'),
+                             inviter_name=inviter_name_display,
+                             config_link=config_link)
+                else:
+                    text = _("payment_successful_with_referral_bonus_full",
+                             months=months,
+                             base_end_date=activation["end_date"].strftime('%Y-%m-%d'),
+                             bonus_days=applied_days,
+                             final_end_date=final_end.strftime('%Y-%m-%d'),
+                             inviter_name=inviter_name_display,
+                             config_link=config_link)
             else:
-                text = _("payment_successful_full",
-                         months=months,
-                         end_date=final_end.strftime('%Y-%m-%d'),
-                         config_link=config_link)
+                if months == 0:
+                    text = _("payment_successful_full_week",
+                             end_date=final_end.strftime('%Y-%m-%d'),
+                             config_link=config_link)
+                else:
+                    text = _("payment_successful_full",
+                             months=months,
+                             end_date=final_end.strftime('%Y-%m-%d'),
+                             config_link=config_link)
 
             markup = get_connect_and_main_keyboard(
                 lang, i18n, settings, config_link, preserve_message=True
