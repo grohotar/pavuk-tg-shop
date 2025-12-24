@@ -75,7 +75,10 @@ async def _initiate_yk_payment(
     if not callback.message:
         return False
 
-    payment_description = get_text("payment_description_subscription", months=months)
+    if months == 0:
+        payment_description = get_text("payment_description_subscription_1_week")
+    else:
+        payment_description = get_text("payment_description_subscription", months=months)
     payment_record_data = {
         "user_id": user_id,
         "amount": price_rub,
@@ -202,9 +205,10 @@ async def _initiate_yk_payment(
                 pass
             return False
 
+        msg_key = "payment_link_message_1_week" if months == 0 else "payment_link_message"
         try:
             await callback.message.edit_text(
-                get_text(key="payment_link_message", months=months),
+                get_text(key=msg_key, months=months),
                 reply_markup=get_payment_url_keyboard(
                     payment_response_yk["confirmation_url"],
                     current_lang,
@@ -220,7 +224,7 @@ async def _initiate_yk_payment(
             )
             try:
                 await callback.message.answer(
-                    get_text(key="payment_link_message", months=months),
+                    get_text(key=msg_key, months=months),
                     reply_markup=get_payment_url_keyboard(
                         payment_response_yk["confirmation_url"],
                         current_lang,
@@ -850,7 +854,10 @@ async def pay_fk_callback_handler(
         return
 
     user_id = callback.from_user.id
-    payment_description = get_text("payment_description_subscription", months=months)
+    if months == 0:
+        payment_description = get_text("payment_description_subscription_1_week")
+    else:
+        payment_description = get_text("payment_description_subscription", months=months)
     currency_code = getattr(freekassa_service, "default_currency", None) or settings.DEFAULT_CURRENCY_SYMBOL or "RUB"
 
     payment_record_payload = {
@@ -924,9 +931,10 @@ async def pay_fk_callback_handler(
                 order_id=order_identifier_display,
                 date=datetime.now().strftime("%Y-%m-%d"),
             )
+            msg_key = "payment_link_message_1_week" if months == 0 else "payment_link_message"
             try:
                 await callback.message.edit_text(
-                    f"{order_info_text}\n\n" + get_text(key="payment_link_message", months=months),
+                    f"{order_info_text}\n\n" + get_text(key=msg_key, months=months),
                     reply_markup=get_payment_url_keyboard(
                         location,
                         current_lang,
@@ -940,7 +948,7 @@ async def pay_fk_callback_handler(
                 logging.warning(f"FreeKassa: failed to display payment link ({e_edit}), sending new message.")
                 try:
                     await callback.message.answer(
-                        f"{order_info_text}\n\n" + get_text(key="payment_link_message", months=months),
+                        f"{order_info_text}\n\n" + get_text(key=msg_key, months=months),
                         reply_markup=get_payment_url_keyboard(
                             location,
                             current_lang,
@@ -1036,7 +1044,10 @@ async def pay_platega_callback_handler(
         return
 
     user_id = callback.from_user.id
-    payment_description = get_text("payment_description_subscription", months=months)
+    if months == 0:
+        payment_description = get_text("payment_description_subscription_1_week")
+    else:
+        payment_description = get_text("payment_description_subscription", months=months)
     currency_code = getattr(platega_service, "default_currency", None) or settings.DEFAULT_CURRENCY_SYMBOL or "RUB"
 
     payment_record_payload = {
@@ -1098,9 +1109,10 @@ async def pay_platega_callback_handler(
                 )
 
         if payment_url:
+            msg_key = "payment_link_message_1_week" if months == 0 else "payment_link_message"
             try:
                 await callback.message.edit_text(
-                    get_text(key="payment_link_message", months=months),
+                    get_text(key=msg_key, months=months),
                     reply_markup=get_payment_url_keyboard(
                         payment_url,
                         current_lang,
@@ -1114,7 +1126,7 @@ async def pay_platega_callback_handler(
                 logging.warning(f"Platega: failed to display payment link ({e_edit}), sending new message.")
                 try:
                     await callback.message.answer(
-                        get_text(key="payment_link_message", months=months),
+                        get_text(key=msg_key, months=months),
                         reply_markup=get_payment_url_keyboard(
                             payment_url,
                             current_lang,
@@ -1204,7 +1216,10 @@ async def pay_crypto_callback_handler(
         return
 
     user_id = callback.from_user.id
-    payment_description = get_text("payment_description_subscription", months=months)
+    if months == 0:
+        payment_description = get_text("payment_description_subscription_1_week")
+    else:
+        payment_description = get_text("payment_description_subscription", months=months)
 
     invoice_url = await cryptopay_service.create_invoice(
         session=session,
@@ -1215,9 +1230,10 @@ async def pay_crypto_callback_handler(
     )
 
     if invoice_url:
+        msg_key = "payment_link_message_1_week" if months == 0 else "payment_link_message"
         try:
             await callback.message.edit_text(
-                get_text(key="payment_link_message", months=months),
+                get_text(key=msg_key, months=months),
                 reply_markup=get_payment_url_keyboard(
                     invoice_url,
                     current_lang,
@@ -1230,7 +1246,7 @@ async def pay_crypto_callback_handler(
         except Exception:
             try:
                 await callback.message.answer(
-                    get_text(key="payment_link_message", months=months),
+                    get_text(key=msg_key, months=months),
                     reply_markup=get_payment_url_keyboard(
                         invoice_url,
                         current_lang,
@@ -1293,7 +1309,10 @@ async def pay_stars_callback_handler(
         return
 
     user_id = callback.from_user.id
-    payment_description = get_text("payment_description_subscription", months=months)
+    if months == 0:
+        payment_description = get_text("payment_description_subscription_1_week")
+    else:
+        payment_description = get_text("payment_description_subscription", months=months)
 
     payment_db_id = await stars_service.create_invoice(
         session=session,

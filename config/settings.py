@@ -72,22 +72,26 @@ class Settings(BaseSettings):
     STARS_ENABLED: bool = Field(default=True)
     TRIBUTE_ENABLED: bool = Field(default=True)
 
+    WEEK_1_ENABLED: bool = Field(default=True, alias="1_WEEK_ENABLED")
     MONTH_1_ENABLED: bool = Field(default=True, alias="1_MONTH_ENABLED")
     MONTH_3_ENABLED: bool = Field(default=True, alias="3_MONTHS_ENABLED")
     MONTH_6_ENABLED: bool = Field(default=True, alias="6_MONTHS_ENABLED")
     MONTH_12_ENABLED: bool = Field(default=True, alias="12_MONTHS_ENABLED")
 
+    RUB_PRICE_1_WEEK: Optional[int] = Field(default=None)
     RUB_PRICE_1_MONTH: Optional[int] = Field(default=None)
     RUB_PRICE_3_MONTHS: Optional[int] = Field(default=None)
     RUB_PRICE_6_MONTHS: Optional[int] = Field(default=None)
     RUB_PRICE_12_MONTHS: Optional[int] = Field(default=None)
 
+    STARS_PRICE_1_WEEK: Optional[int] = Field(default=None)
     STARS_PRICE_1_MONTH: Optional[int] = Field(default=None)
     STARS_PRICE_3_MONTHS: Optional[int] = Field(default=None)
     STARS_PRICE_6_MONTHS: Optional[int] = Field(default=None)
     STARS_PRICE_12_MONTHS: Optional[int] = Field(default=None)
 
 
+    TRIBUTE_LINK_1_WEEK: Optional[str] = Field(default=None)
     TRIBUTE_LINK_1_MONTH: Optional[str] = Field(default=None)
     TRIBUTE_LINK_3_MONTHS: Optional[str] = Field(default=None)
     TRIBUTE_LINK_6_MONTHS: Optional[str] = Field(default=None)
@@ -102,6 +106,8 @@ class Settings(BaseSettings):
     SUBSCRIPTION_NOTIFY_AFTER_EXPIRE: bool = Field(default=True)
     SUBSCRIPTION_NOTIFY_DAYS_BEFORE: int = Field(default=3)
 
+    REFERRAL_BONUS_DAYS_INVITER_1_WEEK: Optional[int] = Field(
+        default=1, alias="REFERRAL_BONUS_DAYS_1_WEEK")
     REFERRAL_BONUS_DAYS_INVITER_1_MONTH: Optional[int] = Field(
         default=3, alias="REFERRAL_BONUS_DAYS_1_MONTH")
     REFERRAL_BONUS_DAYS_INVITER_3_MONTHS: Optional[int] = Field(
@@ -111,6 +117,8 @@ class Settings(BaseSettings):
     REFERRAL_BONUS_DAYS_INVITER_12_MONTHS: Optional[int] = Field(
         default=30, alias="REFERRAL_BONUS_DAYS_12_MONTHS")
 
+    REFERRAL_BONUS_DAYS_REFEREE_1_WEEK: Optional[int] = Field(
+        default=0, alias="REFEREE_BONUS_DAYS_1_WEEK")
     REFERRAL_BONUS_DAYS_REFEREE_1_MONTH: Optional[int] = Field(
         default=1, alias="REFEREE_BONUS_DAYS_1_MONTH")
     REFERRAL_BONUS_DAYS_REFEREE_3_MONTHS: Optional[int] = Field(
@@ -330,6 +338,8 @@ class Settings(BaseSettings):
     def subscription_options(self) -> Dict[int, float]:
         options: Dict[int, float] = {}
 
+        if self.WEEK_1_ENABLED and self.RUB_PRICE_1_WEEK is not None:
+            options[0] = float(self.RUB_PRICE_1_WEEK)
         if self.MONTH_1_ENABLED and self.RUB_PRICE_1_MONTH is not None:
             options[1] = float(self.RUB_PRICE_1_MONTH)
         if self.MONTH_3_ENABLED and self.RUB_PRICE_3_MONTHS is not None:
@@ -344,6 +354,8 @@ class Settings(BaseSettings):
     @property
     def stars_subscription_options(self) -> Dict[int, int]:
         options: Dict[int, int] = {}
+        if self.STARS_ENABLED and self.WEEK_1_ENABLED and self.STARS_PRICE_1_WEEK is not None:
+            options[0] = self.STARS_PRICE_1_WEEK
         if self.STARS_ENABLED and self.MONTH_1_ENABLED and self.STARS_PRICE_1_MONTH is not None:
             options[1] = self.STARS_PRICE_1_MONTH
         if self.STARS_ENABLED and self.MONTH_3_ENABLED and self.STARS_PRICE_3_MONTHS is not None:
@@ -358,6 +370,8 @@ class Settings(BaseSettings):
     @property
     def tribute_payment_links(self) -> Dict[int, str]:
         links: Dict[int, str] = {}
+        if self.TRIBUTE_ENABLED and self.WEEK_1_ENABLED and self.TRIBUTE_LINK_1_WEEK:
+            links[0] = self.TRIBUTE_LINK_1_WEEK
         if self.TRIBUTE_ENABLED and self.MONTH_1_ENABLED and self.TRIBUTE_LINK_1_MONTH:
             links[1] = self.TRIBUTE_LINK_1_MONTH
         if self.TRIBUTE_ENABLED and self.MONTH_3_ENABLED and self.TRIBUTE_LINK_3_MONTHS:
@@ -372,6 +386,8 @@ class Settings(BaseSettings):
     @property
     def referral_bonus_inviter(self) -> Dict[int, int]:
         bonuses: Dict[int, int] = {}
+        if self.REFERRAL_BONUS_DAYS_INVITER_1_WEEK is not None:
+            bonuses[0] = self.REFERRAL_BONUS_DAYS_INVITER_1_WEEK
         if self.REFERRAL_BONUS_DAYS_INVITER_1_MONTH is not None:
             bonuses[1] = self.REFERRAL_BONUS_DAYS_INVITER_1_MONTH
         if self.REFERRAL_BONUS_DAYS_INVITER_3_MONTHS is not None:
@@ -386,6 +402,8 @@ class Settings(BaseSettings):
     @property
     def referral_bonus_referee(self) -> Dict[int, int]:
         bonuses: Dict[int, int] = {}
+        if self.REFERRAL_BONUS_DAYS_REFEREE_1_WEEK is not None:
+            bonuses[0] = self.REFERRAL_BONUS_DAYS_REFEREE_1_WEEK
         if self.REFERRAL_BONUS_DAYS_REFEREE_1_MONTH is not None:
             bonuses[1] = self.REFERRAL_BONUS_DAYS_REFEREE_1_MONTH
         if self.REFERRAL_BONUS_DAYS_REFEREE_3_MONTHS is not None:

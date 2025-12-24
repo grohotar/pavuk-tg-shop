@@ -459,7 +459,11 @@ class SubscriptionService:
             start_date = current_active_sub.end_date
 
         # base duration by months
-        end_after_months = add_months(start_date, months)
+        if months == 0:
+            # 1 week subscription
+            end_after_months = start_date + timedelta(days=7)
+        else:
+            end_after_months = add_months(start_date, months)
         duration_days_total = (end_after_months - start_date).days
         applied_promo_bonus_days = 0
 

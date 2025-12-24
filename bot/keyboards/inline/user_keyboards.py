@@ -98,10 +98,16 @@ def get_subscription_options_keyboard(subscription_options: Dict[
     if subscription_options:
         for months, price in subscription_options.items():
             if price is not None:
-                button_text = _("subscribe_for_months_button",
-                                months=months,
-                                price=price,
-                                currency_symbol=currency_symbol_val)
+                if months == 0:
+                    # Weekly subscription
+                    button_text = _("subscribe_for_1_week_button",
+                                    price=price,
+                                    currency_symbol=currency_symbol_val)
+                else:
+                    button_text = _("subscribe_for_months_button",
+                                    months=months,
+                                    price=price,
+                                    currency_symbol=currency_symbol_val)
                 builder.button(text=button_text,
                                callback_data=f"subscribe_period:{months}")
         builder.adjust(1)
