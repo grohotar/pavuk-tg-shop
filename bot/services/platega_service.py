@@ -82,13 +82,19 @@ class PlategaService:
         amount_int = int(amount)
 
         # Prepare request payload according to Platega API docs
+        # Format description based on subscription period
+        if months == 0:
+            description = "Подписка на 1 неделю"
+        else:
+            description = f"Подписка на {months} мес."
+        
         payload: Dict[str, Any] = {
             "paymentMethod": payment_method or 2,  # Default to SBP (2)
             "paymentDetails": {
                 "amount": amount_int,
                 "currency": currency_code,
             },
-            "description": f"Subscription {months} month(s)",
+            "description": description,
             "payload": f"user_id:{user_id};months:{months};payment_db_id:{payment_db_id}",
             "return": "https://t.me/pipun_bot",  # Return URL after successful payment
             "failedUrl": "https://t.me/pipun_bot",  # URL for failed payment
