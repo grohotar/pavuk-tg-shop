@@ -211,19 +211,25 @@ class NotificationService:
             "tribute": "💎"
         }.get(payment_provider.lower(), "💰")
         
+        # Format period based on months value
+        if months == 0:
+            period_text = "1 нед."
+        else:
+            period_text = f"{months} мес."
+        
         message = _(
             "log_payment_received",
             default="{provider_emoji} <b>Получен платеж</b>\n\n"
                    "👤 Пользователь: {user_display}\n"
                    "💰 Сумма: <b>{amount} {currency}</b>\n"
-                   "📅 Период: <b>{months} мес.</b>\n"
+                   "📅 Период: <b>{period_text}</b>\n"
                    "🏦 Провайдер: {payment_provider}\n"
                    "🕐 Время: {timestamp}",
             provider_emoji=provider_emoji,
             user_display=user_display,
             amount=amount,
             currency=currency,
-            months=months,
+            period_text=period_text,
             payment_provider=payment_provider,
             timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         )

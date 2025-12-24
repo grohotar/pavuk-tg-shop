@@ -298,7 +298,7 @@ class PlategaService:
                     new_status="succeeded",
                 )
 
-                months = payment.subscription_duration_months or 1
+                months = payment.subscription_duration_months if payment.subscription_duration_months is not None else 1
 
                 activation = await self.subscription_service.activate_subscription(
                     session,
@@ -329,7 +329,7 @@ class PlategaService:
 
             config_link = None
             final_end = None
-            months = payment.subscription_duration_months or 1
+            months = payment.subscription_duration_months if payment.subscription_duration_months is not None else 1
             if activation:
                 config_link = activation.get("subscription_url")
                 final_end = activation.get("end_date")

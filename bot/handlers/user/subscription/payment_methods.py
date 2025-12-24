@@ -391,7 +391,7 @@ async def payment_method_history(callback: types.CallbackQuery, settings: Settin
         return
 
     def _format_item(p: Payment) -> str:
-        title = p.description or _("subscription_purchase_title", months=p.subscription_duration_months or 1)
+        title = p.description or _("subscription_purchase_title", months=p.subscription_duration_months if p.subscription_duration_months is not None else 1)
         date_str = p.created_at.strftime('%Y-%m-%d') if p.created_at else "N/A"
         return f"{date_str} — {title} — {p.amount:.2f} {p.currency}"
 
