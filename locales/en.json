@@ -5,7 +5,7 @@
   "channel_subscription_verify_button": "Check subscription",
   "channel_subscription_check_failed": "Couldn't verify the subscription. Please try again later or contact support.",
   "channel_subscription_verified_success": "✅ Subscription confirmed! You're good to go.",
-  "main_menu_greeting": "Welcome to Pipun VPN! 🚀\nFast and secure internet without restrictions.\n\n⚙️ Setup is simple and automatic — takes exactly 1 minute. After that, you'll get access to 4K video and any services.\n\nOur servers (list is frequently updated):\n • 🇩🇪 Germany\n • 🇹🇷 Turkey\n • 🇨🇾 Cyprus\n • 🇱🇻 Latvia",
+  "main_menu_greeting": "<b>Welcome to Pipun VPN!</b> 🚀\nFast and secure internet without restrictions.\n\n⚙️ Setup is simple and automatic — takes approximately 1 minute. After that, you'll get access to 4K video and any services.\n\n<b>Our servers</b> (list is frequently updated):\n • 🇩🇪 Germany\n • 🇹🇷 Turkey\n • 🇨🇾 Cyprus\n • 🇱🇻 Latvia",
   "menu_activate_trial_button": "🆓 Free Trial",
   "menu_subscribe_inline": "🚀 Purchase",
   "menu_my_subscription_inline": "🔐 My Subscription",
