@@ -98,16 +98,20 @@ def get_subscription_options_keyboard(subscription_options: Dict[
     if subscription_options:
         for months, price in subscription_options.items():
             if price is not None:
+                # Format button text with discounts and emoji
                 if months == 0:
-                    # Weekly subscription
-                    button_text = _("subscribe_for_1_week_button",
-                                    price=price,
-                                    currency_symbol=currency_symbol_val)
+                    button_text = f"1 нед. — {price:.0f} {currency_symbol_val}"
+                elif months == 1:
+                    button_text = f"1 мес. — {price:.0f} {currency_symbol_val} 🔥"
+                elif months == 3:
+                    button_text = f"3 мес. — {price:.0f} {currency_symbol_val} (-10%)"
+                elif months == 6:
+                    button_text = f"6 мес. — {price:.0f} {currency_symbol_val} (-15%)"
+                elif months == 12:
+                    button_text = f"12 мес. — {price:.0f} {currency_symbol_val} (-25%)"
                 else:
-                    button_text = _("subscribe_for_months_button",
-                                    months=months,
-                                    price=price,
-                                    currency_symbol=currency_symbol_val)
+                    button_text = f"{months} мес. — {price:.0f} {currency_symbol_val}"
+                
                 builder.button(text=button_text,
                                callback_data=f"subscribe_period:{months}")
         builder.adjust(1)
