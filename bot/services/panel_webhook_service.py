@@ -53,6 +53,10 @@ class PanelWebhookService:
         from db.dal import subscription_dal, payment_dal
         from datetime import datetime, timezone
         
+        # Skip auto-renewal if Tribute is disabled
+        if not self.settings.TRIBUTE_ENABLED:
+            return False
+        
         try:
             auto_renewed = False
             # Check if user has tribute subscriptions that weren't cancelled

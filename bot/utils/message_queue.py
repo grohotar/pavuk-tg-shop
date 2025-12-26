@@ -60,6 +60,25 @@ class MessageQueue:
                         self.last_send_times.popleft()
                         
                 except Exception as e:
+                    error_str = str(e)
+                    # Handle BUTTON_USER_PRIVACY_RESTRICTED by retrying without reply_markup
+                    if "BUTTON_USER_PRIVACY_RESTRICTED" in error_str and "reply_markup" in message.kwargs:
+                        try:
+                            # Retry without the reply_markup (buttons)
+                            kwargs_without_markup = {k: v for k, v in message.kwargs.items() if k != "reply_markup"}
+                            retry_message = QueuedMessage(
+                                chat_id=message.chat_id,
+                                method_name=message.method_name,
+                                kwargs=kwargs_without_markup,
+                                callback=message.callback
+                            )
+                            await self._send_message(retry_message)
+                            self.last_send_times.append(datetime.now())
+                            self.total_sent += 1
+                            logging.info(f"Retried message to {message.chat_id} without buttons due to privacy restrictions")
+                            continue
+                        except Exception as retry_e:
+                            logging.error(f"Retry without buttons also failed for {message.chat_id}: {retry_e}")
                     self.total_failed += 1
                     logging.error(f"Failed to send queued message to {message.chat_id}: {e}")
                     
