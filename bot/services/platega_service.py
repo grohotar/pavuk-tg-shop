@@ -44,7 +44,7 @@ class PlategaService:
         self.default_currency: str = (settings.DEFAULT_CURRENCY_SYMBOL or "RUB").upper()
 
         self.api_base_url: str = "https://app.platega.io"
-        self._timeout = ClientTimeout(total=15)
+        self._timeout = ClientTimeout(total=45)
         self._session: Optional[ClientSession] = None
 
         self.configured: bool = bool(
