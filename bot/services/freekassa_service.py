@@ -395,6 +395,8 @@ class FreeKassaService:
 
             try:
                 notification_service = NotificationService(self.bot, self.settings, self.i18n)
+                # Count user's succeeded payments (including this one)
+                payment_count = await payment_dal.count_user_succeeded_payments(session, payment.user_id)
                 await notification_service.notify_payment_received(
                     user_id=payment.user_id,
                     amount=float(payment.amount),
@@ -402,6 +404,7 @@ class FreeKassaService:
                     months=months,
                     payment_provider="freekassa",
                     username=db_user.username if db_user else None,
+                    payment_number=payment_count,
                 )
             except Exception as e:
                 logging.error(f"FreeKassa notification: failed to notify admins: {e}")

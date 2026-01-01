@@ -51,6 +51,13 @@ class NotificationService:
                         default="👤 Открыть профиль",
                     ),
                     url=f"tg://user?id={user_id}",
+                ),
+                InlineKeyboardButton(
+                    text=translate(
+                        "log_open_user_card_button",
+                        default="📋 Карточка",
+                    ),
+                    callback_data=f"user_action:refresh:{user_id}",
                 )
             ]
         ]
@@ -190,8 +197,13 @@ class NotificationService:
     
     async def notify_payment_received(self, user_id: int, amount: float, currency: str,
                                     months: int, payment_provider: str, 
-                                    username: Optional[str] = None):
-        """Send notification about successful payment"""
+                                    username: Optional[str] = None,
+                                    payment_number: Optional[int] = None):
+        """Send notification about successful payment
+        
+        Args:
+            payment_number: Which payment this is for the user (1st, 2nd, etc.)
+        """
         if not self.settings.LOG_PAYMENTS:
             return
         
@@ -208,7 +220,8 @@ class NotificationService:
             "freekassa": "💳",
             "cryptopay": "₿",
             "stars": "⭐",
-            "tribute": "💎"
+            "tribute": "💎",
+            "platega": "💳",
         }.get(payment_provider.lower(), "💰")
         
         # Format period based on months value
@@ -217,12 +230,18 @@ class NotificationService:
         else:
             period_text = f"{months} мес."
         
+        # Format payment number text
+        payment_number_text = ""
+        if payment_number is not None:
+            payment_number_text = f"🔢 Платёж №: <b>{payment_number}</b>\n"
+        
         message = _(
             "log_payment_received",
             default="{provider_emoji} <b>Получен платеж</b>\n\n"
                    "👤 Пользователь: {user_display}\n"
                    "💰 Сумма: <b>{amount} {currency}</b>\n"
                    "📅 Период: <b>{period_text}</b>\n"
+                   "{payment_number_text}"
                    "🏦 Провайдер: {payment_provider}\n"
                    "🕐 Время: {timestamp}",
             provider_emoji=provider_emoji,
@@ -230,6 +249,7 @@ class NotificationService:
             amount=amount,
             currency=currency,
             period_text=period_text,
+            payment_number_text=payment_number_text,
             payment_provider=payment_provider,
             timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         )

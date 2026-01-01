@@ -183,13 +183,16 @@ class StarsService:
         try:
             notification_service = NotificationService(self.bot, self.settings, self.i18n)
             user = await user_dal.get_user_by_id(session, message.from_user.id)
+            # Count user's succeeded payments (including this one)
+            payment_count = await payment_dal.count_user_succeeded_payments(session, message.from_user.id)
             await notification_service.notify_payment_received(
                 user_id=message.from_user.id,
                 amount=float(stars_amount),
                 currency="XTR",
                 months=months,
                 payment_provider="stars",
-                username=user.username if user else None
+                username=user.username if user else None,
+                payment_number=payment_count,
             )
         except Exception as e:
             logging.error(f"Failed to send stars payment notification: {e}")
