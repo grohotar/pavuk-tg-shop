@@ -1400,3 +1400,64 @@ async def user_card_from_list_handler(callback: types.CallbackQuery,
     except Exception as e:
         logging.error(f"Error displaying user card: {e}")
         await callback.answer("Error displaying user card", show_alert=True)
+
+
+@router.callback_query(F.data.startswith("log_user_card:"))
+async def log_user_card_handler(callback: types.CallbackQuery,
+                                state: FSMContext, i18n_data: dict,
+                                settings: Settings, bot: Bot,
+                                subscription_service: SubscriptionService,
+                                panel_service: PanelApiService,
+                                session: AsyncSession):
+    """Display user card as a NEW message when clicked from log notifications.
+    
+    This handler sends a new message instead of editing the existing one,
+    so the original notification (new user, payment, etc.) is preserved.
+    """
+    try:
+        parts = callback.data.split(":")
+        user_id = int(parts[1])
+    except (IndexError, ValueError):
+        await callback.answer("Invalid user data", show_alert=True)
+        return
+    
+    current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
+    i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
+    if not i18n:
+        await callback.answer("Language service error", show_alert=True)
+        return
+    _ = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs)
+    
+    # Get user from database
+    user = await user_dal.get_user_by_id(session, user_id)
+    if not user:
+        await callback.answer("Пользователь не найден", show_alert=True)
+        return
+    
+    # Create keyboard
+    keyboard = get_user_card_keyboard(
+        user_id,
+        i18n,
+        current_lang,
+        user.referred_by_id
+    )
+    
+    # Format user card
+    try:
+        from bot.services.referral_service import ReferralService
+        referral_service = ReferralService(settings, subscription_service, bot, i18n)
+        user_card_text = await format_user_card(user, session, subscription_service, i18n, current_lang, referral_service)
+        markup = keyboard.as_markup()
+        
+        # Send as NEW message (not edit)
+        await bot.send_message(
+            chat_id=callback.message.chat.id,
+            text=user_card_text,
+            reply_markup=markup,
+            parse_mode="HTML"
+        )
+        await callback.answer()
+        
+    except Exception as e:
+        logging.error(f"Error displaying user card from log: {e}")
+        await callback.answer("Ошибка отображения карточки", show_alert=True)

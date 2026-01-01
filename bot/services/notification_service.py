@@ -46,18 +46,12 @@ class NotificationService:
         buttons = [
             [
                 InlineKeyboardButton(
-                    text=translate(
-                        "log_open_profile_link",
-                        default="👤 Открыть профиль",
-                    ),
+                    text="👤 Открыть профиль",
                     url=f"tg://user?id={user_id}",
                 ),
                 InlineKeyboardButton(
-                    text=translate(
-                        "log_open_user_card_button",
-                        default="📋 Карточка",
-                    ),
-                    callback_data=f"user_action:refresh:{user_id}",
+                    text="📋 Карточка",
+                    callback_data=f"log_user_card:{user_id}",
                 )
             ]
         ]
@@ -65,10 +59,7 @@ class NotificationService:
         if referrer_id:
             buttons.append([
                 InlineKeyboardButton(
-                    text=translate(
-                        "log_open_referrer_profile_button",
-                        default="👤 Открыть профиль пригласившего",
-                    ),
+                    text="👤 Профиль пригласившего",
                     url=f"tg://user?id={referrer_id}",
                 )
             ])
