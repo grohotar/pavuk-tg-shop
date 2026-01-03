@@ -56,6 +56,23 @@ async def show_statistics_handler(callback: types.CallbackQuery,
         f"🎁 {_('admin_user_stats_referral_label', default='Привлечено по реферальной программе')}: <b>{user_stats['referral_users']}</b>"
     )
     
+    # Subscription dynamics
+    stats_text_parts.append(
+        f"\n<b>📈 {_('admin_subscription_dynamics_header', default='Динамика подписок')}</b>"
+    )
+    stats_text_parts.append(
+        f"➕ {_('admin_new_paid_today_label', default='Новых платных сегодня')}: <b>{user_stats.get('new_paid_today', 0)}</b>"
+    )
+    stats_text_parts.append(
+        f"➕ {_('admin_new_paid_yesterday_label', default='Новых платных вчера')}: <b>{user_stats.get('new_paid_yesterday', 0)}</b>"
+    )
+    stats_text_parts.append(
+        f"➖ {_('admin_expired_today_label', default='Истекло сегодня')}: <b>{user_stats.get('expired_today', 0)}</b>"
+    )
+    stats_text_parts.append(
+        f"➖ {_('admin_expired_yesterday_label', default='Истекло вчера')}: <b>{user_stats.get('expired_yesterday', 0)}</b>"
+    )
+    
     # Panel Statistics - moved above financial
     stats_text_parts.append(f"\n<b>🖥 {_('admin_panel_stats_header', default='Статистика панели')}</b>")
     
@@ -153,6 +170,22 @@ async def show_statistics_handler(callback: types.CallbackQuery,
     )
     stats_text_parts.append(
         f"🏆 {_('admin_financial_all_time_label', default='За все время')}: <b>{financial_stats['all_time_revenue']:.2f} RUB</b>"
+    )
+    
+    # Platega statistics with commission calculation (10% commission)
+    platega_month = financial_stats.get('platega_month_revenue', 0)
+    platega_all = financial_stats.get('platega_all_time_revenue', 0)
+    platega_month_net = platega_month * 0.9
+    platega_all_net = platega_all * 0.9
+    
+    stats_text_parts.append(
+        f"\n<b>📱 {_('admin_platega_stats_header', default='Platega (СБП)')}</b>"
+    )
+    stats_text_parts.append(
+        f"📅 {_('admin_platega_month_label', default='За месяц')}: <b>{platega_month:.2f} RUB</b> (чистыми: {platega_month_net:.2f})"
+    )
+    stats_text_parts.append(
+        f"🏆 {_('admin_platega_all_time_label', default='За все время')}: <b>{platega_all:.2f} RUB</b> (чистыми: {platega_all_net:.2f})"
     )
 
     last_payments_models: List[

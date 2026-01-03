@@ -230,12 +230,35 @@ async def get_financial_statistics(session: AsyncSession) -> Dict[str, Any]:
     today_count = await session.execute(stmt_count_today)
     today_payments_count = today_count.scalar() or 0
     
+    # Platega month revenue
+    stmt_platega_month = select(func.sum(Payment.amount)).where(
+        and_(
+            Payment.status == 'succeeded',
+            Payment.provider == 'platega',
+            Payment.created_at >= month_start
+        )
+    )
+    platega_month_revenue = await session.execute(stmt_platega_month)
+    platega_month_amount = platega_month_revenue.scalar() or 0
+    
+    # Platega all time revenue
+    stmt_platega_all = select(func.sum(Payment.amount)).where(
+        and_(
+            Payment.status == 'succeeded',
+            Payment.provider == 'platega'
+        )
+    )
+    platega_all_revenue = await session.execute(stmt_platega_all)
+    platega_all_amount = platega_all_revenue.scalar() or 0
+    
     return {
         "today_revenue": float(today_amount),
         "week_revenue": float(week_amount),
         "month_revenue": float(month_amount),
         "all_time_revenue": float(all_amount),
-        "today_payments_count": today_payments_count
+        "today_payments_count": today_payments_count,
+        "platega_month_revenue": float(platega_month_amount),
+        "platega_all_time_revenue": float(platega_all_amount),
     }
 
 

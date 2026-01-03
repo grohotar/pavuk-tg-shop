@@ -211,11 +211,12 @@ async def get_all_users_with_panel_uuid(session: AsyncSession) -> List[User]:
 
 async def get_enhanced_user_statistics(session: AsyncSession) -> Dict[str, Any]:
     """Get comprehensive user statistics including active users, trial users, etc."""
-    from datetime import datetime, timezone
+    from datetime import datetime, timezone, timedelta
     
     # Use timezone-aware UTC to avoid naive/aware comparison issues in SQL queries
     now = datetime.now(timezone.utc)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday_start = today_start - timedelta(days=1)
     
     # Total users
     total_users_stmt = select(func.count(User.user_id))
@@ -264,6 +265,60 @@ async def get_enhanced_user_statistics(session: AsyncSession) -> Dict[str, Any]:
     referral_users_stmt = select(func.count(User.user_id)).where(User.referred_by_id.is_not(None))
     referral_users = (await session.execute(referral_users_stmt)).scalar() or 0
     
+    # New paid subscriptions today (first payment from user today)
+    from db.models import Payment
+    new_paid_today_stmt = (
+        select(func.count(func.distinct(Payment.user_id)))
+        .where(
+            and_(
+                Payment.status == 'succeeded',
+                Payment.created_at >= today_start,
+                Payment.provider.is_not(None)
+            )
+        )
+    )
+    new_paid_today = (await session.execute(new_paid_today_stmt)).scalar() or 0
+    
+    # New paid subscriptions yesterday
+    new_paid_yesterday_stmt = (
+        select(func.count(func.distinct(Payment.user_id)))
+        .where(
+            and_(
+                Payment.status == 'succeeded',
+                Payment.created_at >= yesterday_start,
+                Payment.created_at < today_start,
+                Payment.provider.is_not(None)
+            )
+        )
+    )
+    new_paid_yesterday = (await session.execute(new_paid_yesterday_stmt)).scalar() or 0
+    
+    # Subscriptions expired today (end_date between yesterday and today)
+    expired_today_stmt = (
+        select(func.count(func.distinct(Subscription.user_id)))
+        .where(
+            and_(
+                Subscription.end_date >= today_start,
+                Subscription.end_date < now,
+                Subscription.provider.is_not(None)  # Only paid subscriptions
+            )
+        )
+    )
+    expired_today = (await session.execute(expired_today_stmt)).scalar() or 0
+    
+    # Subscriptions expired yesterday
+    expired_yesterday_stmt = (
+        select(func.count(func.distinct(Subscription.user_id)))
+        .where(
+            and_(
+                Subscription.end_date >= yesterday_start,
+                Subscription.end_date < today_start,
+                Subscription.provider.is_not(None)  # Only paid subscriptions
+            )
+        )
+    )
+    expired_yesterday = (await session.execute(expired_yesterday_stmt)).scalar() or 0
+    
     return {
         "total_users": total_users,
         "banned_users": banned_users,
@@ -271,7 +326,11 @@ async def get_enhanced_user_statistics(session: AsyncSession) -> Dict[str, Any]:
         "paid_subscriptions": paid_subs_users,
         "trial_users": trial_users,
         "inactive_users": max(0, inactive_users),
-        "referral_users": referral_users
+        "referral_users": referral_users,
+        "new_paid_today": new_paid_today,
+        "new_paid_yesterday": new_paid_yesterday,
+        "expired_today": expired_today,
+        "expired_yesterday": expired_yesterday,
     }
 
 

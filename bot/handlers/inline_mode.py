@@ -173,14 +173,23 @@ async def create_user_stats_result(session: AsyncSession, i18n_instance, lang: s
                    "🆓 На пробном периоде: <b>{trial}</b>\n"
                    "😴 Неактивных: <b>{inactive}</b>\n"
                    "🚫 Заблокированных: <b>{banned}</b>\n"
-                   "🎁 Привлечено по реферальной программе: <b>{referral}</b>",
+                   "🎁 Привлечено по реферальной программе: <b>{referral}</b>\n\n"
+                   "📈 <b>Динамика подписок:</b>\n"
+                   "➕ Новых платных сегодня: <b>{new_paid_today}</b>\n"
+                   "➕ Новых платных вчера: <b>{new_paid_yesterday}</b>\n"
+                   "➖ Истекло сегодня: <b>{expired_today}</b>\n"
+                   "➖ Истекло вчера: <b>{expired_yesterday}</b>",
             total=user_stats['total_users'],
             active_today=user_stats['active_today'],
             paid=user_stats['paid_subscriptions'],
             trial=user_stats['trial_users'],
             inactive=user_stats['inactive_users'],
             banned=user_stats['banned_users'],
-            referral=user_stats['referral_users']
+            referral=user_stats['referral_users'],
+            new_paid_today=user_stats.get('new_paid_today', 0),
+            new_paid_yesterday=user_stats.get('new_paid_yesterday', 0),
+            expired_today=user_stats.get('expired_today', 0),
+            expired_yesterday=user_stats.get('expired_yesterday', 0),
         )
         
         return InlineQueryResultArticle(
@@ -215,6 +224,10 @@ async def create_financial_stats_result(session: AsyncSession, i18n_instance, la
         from db.dal.payment_dal import get_financial_statistics
         financial_stats = await get_financial_statistics(session)
         
+        # Calculate net amounts (after 10% commission)
+        platega_month_net = financial_stats['platega_month_revenue'] * 0.9
+        platega_all_net = financial_stats['platega_all_time_revenue'] * 0.9
+        
         stats_text = _(
             "inline_financial_stats_message",
             default="💰 <b>Финансовая статистика</b>\n\n"
@@ -222,12 +235,19 @@ async def create_financial_stats_result(session: AsyncSession, i18n_instance, la
                    "   ({today_count} платежей)\n"
                    "📅 За неделю: <b>{week:.2f} RUB</b>\n"
                    "📅 За месяц: <b>{month:.2f} RUB</b>\n"
-                   "🏆 За все время: <b>{all_time:.2f} RUB</b>",
+                   "🏆 За все время: <b>{all_time:.2f} RUB</b>\n\n"
+                   "📱 <b>Platega (СБП):</b>\n"
+                   "📅 За месяц: <b>{platega_month:.2f} RUB</b> (чистыми: {platega_month_net:.2f})\n"
+                   "🏆 За все время: <b>{platega_all:.2f} RUB</b> (чистыми: {platega_all_net:.2f})",
             today=financial_stats['today_revenue'],
             today_count=financial_stats['today_payments_count'],
             week=financial_stats['week_revenue'],
             month=financial_stats['month_revenue'],
-            all_time=financial_stats['all_time_revenue']
+            all_time=financial_stats['all_time_revenue'],
+            platega_month=financial_stats['platega_month_revenue'],
+            platega_month_net=platega_month_net,
+            platega_all=financial_stats['platega_all_time_revenue'],
+            platega_all_net=platega_all_net
         )
         
         return InlineQueryResultArticle(
