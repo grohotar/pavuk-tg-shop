@@ -482,5 +482,13 @@
   "admin_ads_delete_confirm": "Are you sure you want to delete campaign #{id}? This action is irreversible.",
   "admin_ads_deleted_success": "Campaign deleted.",
   "admin_ads_not_found": "Campaign not found.",
-  "free_kassa_order_full": "Order #{order_id} from {date}\n\n"
+  "free_kassa_order_full": "Order #{order_id} from {date}\n\n",
+  "admin_subscription_dynamics_header": "Subscription Dynamics",
+  "admin_new_paid_today_label": "New paid today",
+  "admin_new_paid_yesterday_label": "New paid yesterday",
+  "admin_expired_today_label": "Expired today",
+  "admin_expired_yesterday_label": "Expired yesterday",
+  "admin_platega_stats_header": "Platega (SBP)",
+  "admin_platega_month_label": "This month",
+  "admin_platega_all_time_label": "All time"
 }

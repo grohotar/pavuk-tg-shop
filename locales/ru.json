@@ -482,5 +482,13 @@
   "admin_ads_delete_confirm": "Вы уверены, что хотите удалить кампанию #{id}? Это действие необратимо.",
   "admin_ads_deleted_success": "Кампания удалена.",
   "admin_ads_not_found": "Кампания не найдена.",
-  "free_kassa_order_full": "Заказ №{order_id} от {date}\n\n"
+  "free_kassa_order_full": "Заказ №{order_id} от {date}\n\n",
+  "admin_subscription_dynamics_header": "Динамика подписок",
+  "admin_new_paid_today_label": "Новых платных сегодня",
+  "admin_new_paid_yesterday_label": "Новых платных вчера",
+  "admin_expired_today_label": "Истекло сегодня",
+  "admin_expired_yesterday_label": "Истекло вчера",
+  "admin_platega_stats_header": "Platega (СБП)",
+  "admin_platega_month_label": "За месяц",
+  "admin_platega_all_time_label": "За все время"
 }
