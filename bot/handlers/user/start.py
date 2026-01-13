@@ -332,8 +332,9 @@ async def start_command_handler(message: types.Message,
         if raw_ref_value.isdigit():
             if settings.LEGACY_REFS:
                 potential_referrer_id = int(raw_ref_value)
-                if potential_referrer_id != user_id and await user_dal.get_user_by_id(
-                        session, potential_referrer_id):
+                ref_user = await user_dal.get_user_by_id(session, potential_referrer_id)
+                # Check referrer exists, is not the same user, and is not banned
+                if ref_user and potential_referrer_id != user_id and not ref_user.is_banned:
                     referred_by_user_id = potential_referrer_id
         else:
             normalized_code = raw_ref_value.strip()
@@ -343,7 +344,8 @@ async def start_command_handler(message: types.Message,
             if normalized_code:
                 ref_user = await user_dal.get_user_by_referral_code(
                     session, normalized_code)
-            if ref_user and ref_user.user_id != user_id:
+            # Check referrer exists, is not the same user, and is not banned
+            if ref_user and ref_user.user_id != user_id and not ref_user.is_banned:
                 referred_by_user_id = ref_user.user_id
     elif promo_match:
         promo_code_to_apply = promo_match.group(1)

@@ -211,7 +211,8 @@ async def _send_with_profile_link_fallback(
         await sender(**send_kwargs)
     except TelegramBadRequest as exc:
         message = getattr(exc, "message", "") or str(exc)
-        if "BUTTON_USER_INVALID" not in message:
+        # Handle both BUTTON_USER_INVALID and BUTTON_USER_PRIVACY_RESTRICTED
+        if "BUTTON_USER_INVALID" not in message and "BUTTON_USER_PRIVACY_RESTRICTED" not in message:
             raise
 
         logging.warning(
