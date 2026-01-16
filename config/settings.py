@@ -64,6 +64,7 @@ class Settings(BaseSettings):
     FREEKASSA_PAYMENT_METHOD_ID: Optional[int] = None
 
     PLATEGA_ENABLED: bool = Field(default=False)
+    PLATEGA_CARD_ENABLED: bool = Field(default=False, description="Enable Platega card payments (Карта МИР)")
     PLATEGA_MERCHANT_ID: Optional[str] = None
     PLATEGA_SECRET_KEY: Optional[str] = None
     PLATEGA_PAYMENT_METHOD_ID: Optional[int] = None

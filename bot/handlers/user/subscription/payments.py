@@ -1177,6 +1177,186 @@ async def pay_platega_callback_handler(
         pass
 
 
+@router.callback_query(F.data.startswith("pay_platega_card:"))
+async def pay_platega_card_callback_handler(
+    callback: types.CallbackQuery,
+    settings: Settings,
+    i18n_data: dict,
+    platega_service: PlategaService,
+    session: AsyncSession,
+):
+    """Handle Platega card payments (Карта МИР) with payment_method=11."""
+    current_lang = i18n_data.get("current_language", settings.DEFAULT_LANGUAGE)
+    i18n: Optional[JsonI18n] = i18n_data.get("i18n_instance")
+    get_text = lambda key, **kwargs: i18n.gettext(current_lang, key, **kwargs) if i18n else key
+
+    if not i18n or not callback.message:
+        try:
+            await callback.answer(get_text("error_occurred_try_again"), show_alert=True)
+        except Exception:
+            pass
+        return
+
+    if not platega_service or not platega_service.configured:
+        logging.error("Platega service is not configured or unavailable for card payments.")
+        try:
+            await callback.answer(get_text("payment_service_unavailable_alert"), show_alert=True)
+        except Exception:
+            pass
+        try:
+            await callback.message.edit_text(get_text("payment_service_unavailable"))
+        except Exception:
+            pass
+        return
+
+    try:
+        _, data_payload = callback.data.split(":", 1)
+        months_str, price_str = data_payload.split(":")
+        months = int(months_str)
+        price_rub = float(price_str)
+    except (ValueError, IndexError):
+        logging.error(f"Invalid pay_platega_card data in callback: {callback.data}")
+        try:
+            await callback.answer(get_text("error_try_again"), show_alert=True)
+        except Exception:
+            pass
+        return
+
+    user_id = callback.from_user.id
+    if months == 0:
+        payment_description = get_text("payment_description_subscription_1_week")
+    else:
+        payment_description = get_text("payment_description_subscription", months=months)
+    currency_code = getattr(platega_service, "default_currency", None) or settings.DEFAULT_CURRENCY_SYMBOL or "RUB"
+
+    payment_record_payload = {
+        "user_id": user_id,
+        "amount": price_rub,
+        "currency": currency_code,
+        "status": "pending_platega",
+        "description": payment_description,
+        "subscription_duration_months": months,
+        "provider": "platega",
+    }
+
+    try:
+        payment_record = await payment_dal.create_payment_record(session, payment_record_payload)
+        await session.commit()
+    except Exception as e_db_create:
+        await session.rollback()
+        logging.error(
+            f"Platega card: failed to create payment record for user {user_id}: {e_db_create}",
+            exc_info=True,
+        )
+        try:
+            await callback.message.edit_text(get_text("error_creating_payment_record"))
+        except Exception:
+            pass
+        try:
+            await callback.answer(get_text("error_try_again"), show_alert=True)
+        except Exception:
+            pass
+        return
+
+    # Use payment_method=11 for card acquiring (Карта МИР)
+    success, response_data = await platega_service.create_payment(
+        payment_db_id=payment_record.payment_id,
+        user_id=payment_record.user_id,
+        months=months,
+        amount=price_rub,
+        currency=platega_service.default_currency,
+        payment_method=11,  # Card acquiring
+    )
+
+    if success:
+        payment_url = response_data.get("redirect")
+        transaction_id = response_data.get("transactionId")
+
+        if transaction_id:
+            try:
+                await payment_dal.update_provider_payment_and_status(
+                    session,
+                    payment_record.payment_id,
+                    str(transaction_id),
+                    payment_record.status,
+                )
+                await session.commit()
+            except Exception as e_status:
+                await session.rollback()
+                logging.error(
+                    f"Platega card: failed to store transaction id for payment {payment_record.payment_id}: {e_status}",
+                    exc_info=True,
+                )
+
+        if payment_url:
+            msg_key = "payment_link_message_1_week" if months == 0 else "payment_link_message"
+            try:
+                await callback.message.edit_text(
+                    get_text(key=msg_key, months=months),
+                    reply_markup=get_payment_url_keyboard(
+                        payment_url,
+                        current_lang,
+                        i18n,
+                        back_callback=f"subscribe_period:{months}",
+                        back_text_key="back_to_payment_methods_button",
+                    ),
+                    disable_web_page_preview=False,
+                )
+            except Exception as e_edit:
+                logging.warning(f"Platega card: failed to display payment link ({e_edit}), sending new message.")
+                try:
+                    await callback.message.answer(
+                        get_text(key=msg_key, months=months),
+                        reply_markup=get_payment_url_keyboard(
+                            payment_url,
+                            current_lang,
+                            i18n,
+                            back_callback=f"subscribe_period:{months}",
+                            back_text_key="back_to_payment_methods_button",
+                        ),
+                        disable_web_page_preview=False,
+                    )
+                except Exception:
+                    pass
+            try:
+                await callback.answer()
+            except Exception:
+                pass
+            return
+
+        logging.error(
+            "Platega card: create_payment succeeded but no payment link returned for payment %s. Response: %s",
+            payment_record.payment_id,
+            response_data,
+        )
+    else:
+        logging.error(
+            "Platega card: create_payment failed for payment %s with response %s",
+            payment_record.payment_id,
+            response_data,
+        )
+
+    try:
+        await payment_dal.update_payment_status_by_db_id(
+            session,
+            payment_record.payment_id,
+            "failed_creation",
+        )
+        await session.commit()
+    except Exception as e_status:
+        await session.rollback()
+        logging.error(f"Platega card: failed to mark payment {payment_record.payment_id} as failed_creation: {e_status}", exc_info=True)
+
+    try:
+        await callback.message.edit_text(get_text("error_payment_gateway"))
+    except Exception:
+        pass
+    try:
+        await callback.answer(get_text("error_payment_gateway"), show_alert=True)
+    except Exception:
+        pass
+
+
 @router.callback_query(F.data.startswith("pay_crypto:"))
 async def pay_crypto_callback_handler(
     callback: types.CallbackQuery,
