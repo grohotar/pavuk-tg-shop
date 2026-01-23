@@ -358,6 +358,15 @@ async def start_command_handler(message: types.Message,
     sanitized_first_name = sanitize_display_name(user.first_name)
     sanitized_last_name = sanitize_display_name(user.last_name)
 
+    # Determine source parameter
+    source_param: Optional[str] = None
+    if ad_start_param:
+        source_param = ad_start_param
+    elif ref_match:
+        source_param = "referral"
+    elif promo_match:
+        source_param = "promo"
+
     db_user = await user_dal.get_user_by_id(session, user_id)
     if not db_user:
         user_data_to_create = {
@@ -367,6 +376,7 @@ async def start_command_handler(message: types.Message,
             "last_name": sanitized_last_name,
             "language_code": current_lang,
             "referred_by_id": referred_by_user_id,
+            "source": source_param,
             "registration_date": datetime.now(timezone.utc)
         }
         try:
@@ -396,7 +406,8 @@ async def start_command_handler(message: types.Message,
                         user_id=user_id,
                         username=sanitized_username,
                         first_name=sanitized_first_name,
-                        referred_by_id=referred_by_user_id
+                        referred_by_id=referred_by_user_id,
+                        source=source_param
                     )
                 except Exception as e:
                     logging.error(f"Failed to send new user notification: {e}")

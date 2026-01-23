@@ -147,7 +147,8 @@ class NotificationService:
     
     async def notify_new_user_registration(self, user_id: int, username: Optional[str] = None, 
                                          first_name: Optional[str] = None, 
-                                         referred_by_id: Optional[int] = None):
+                                         referred_by_id: Optional[int] = None,
+                                         source: Optional[str] = None):
         """Send notification about new user registration"""
         if not self.settings.LOG_NEW_USERS:
             return
@@ -170,15 +171,20 @@ class NotificationService:
                 referrer_link=referrer_link,
             )
         
+        source_text = ""
+        if source:
+            source_text = f"\n🔗 Источник: <code>{hd.quote(source)}</code>"
+        
         message = _(
             "log_new_user_registration",
             default="👤 <b>Новый пользователь</b>\n\n"
                    "🆔 ID: <code>{user_id}</code>\n"
-                   "👤 Имя: {user_display}{referral_text}\n"
+                   "👤 Имя: {user_display}{referral_text}{source_text}\n"
                    "📅 Время: {timestamp}",
             user_id=user_id,
             user_display=user_display,
             referral_text=referral_text,
+            source_text=source_text,
             timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         )
 

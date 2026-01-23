@@ -25,6 +25,7 @@ class User(Base):
     referred_by_id = Column(BigInteger,
                             ForeignKey("users.user_id"),
                             nullable=True)
+    source = Column(String, nullable=True, index=True)
     channel_subscription_verified = Column(Boolean, nullable=True)
     channel_subscription_checked_at = Column(DateTime(timezone=True),
                                              nullable=True)
