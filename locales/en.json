@@ -59,9 +59,8 @@
 
   "payment_description_subscription_1_week": "Subscription payment for 1 week",
   "payment_description_subscription": "Subscription payment for {months} mo.",
-  "payment_link_message_1_week": "To pay for 1 week subscription, click the button below:",
-  "payment_link_message": "To pay for {months} mo. subscription, click the button below:",
-  "payment_awaiting_confirmation": "⏳ Awaiting payment confirmation\nThis usually takes 10-30 seconds\n\nAfter successful payment, you will automatically receive a notification with subscription access",
+  "payment_link_message_1_week": "⏳ Awaiting payment confirmation\nThis usually takes 10-30 seconds\n\nAfter successful payment, you will automatically receive a notification with subscription access",
+  "payment_link_message": "⏳ Awaiting payment confirmation\nThis usually takes 10-30 seconds\n\nAfter successful payment, you will automatically receive a notification with subscription access",
   "free_kassa_order_info": "Order #{order_id} from {date}",
   "platega_order_full": "SBP Order #{order_id} from {date}",
   "payment_invoice_sent_message": "Telegram has sent the invoice above. Complete the payment or pick another method below.",
