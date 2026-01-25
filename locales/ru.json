@@ -305,7 +305,7 @@
   "log_referral_suffix": " (реферал от {referrer_link})",
   "log_open_profile_link": "👤 Открыть профиль",
   "log_open_referrer_profile_button": "👤 Профиль пригласившего",
-  "log_new_user_registration": "👤 <b>Новый пользователь</b>\n\n🆔 ID: <code>{user_id}</code>\n👤 Имя: {user_display}{referral_text}\n📅 Время: {timestamp}",
+  "log_new_user_registration": "👤 <b>Новый пользователь</b>\n\n🆔 ID: <code>{user_id}</code>\n👤 Имя: {user_display}{referral_text}{source_text}\n📅 Время: {timestamp}",
   "log_payment_received": "{provider_emoji} <b>Получен платеж</b>\n\n👤 Пользователь: {user_display}\n💰 Сумма: <b>{amount} {currency}</b>\n📅 Период: <b>{period_text}</b>\n{payment_number_text}🏦 Провайдер: {payment_provider}\n🕐 Время: {timestamp}",
   "log_promo_activation": "🎁 <b>Активирован промокод</b>\n\n👤 Пользователь: {user_display}\n🏷 Код: <code>{promo_code}</code>\n🎯 Бонус: <b>+{bonus_days} дн.</b>\n🕐 Время: {timestamp}",
   "log_trial_activation": "🆓 <b>Активирован триал</b>\n\n👤 Пользователь: {user_display}\n⏰ Действует до: <b>{end_date}</b>\n🕐 Время: {timestamp}",

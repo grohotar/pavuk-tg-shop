@@ -1,5 +1,4 @@
 import logging
-import asyncio
 from datetime import datetime
 from aiogram import Router, F, types
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
@@ -219,10 +218,9 @@ async def _initiate_yk_payment(
                 ),
                 disable_web_page_preview=False,
             )
-            # Change message to awaiting confirmation after user clicks the payment link
-            await asyncio.sleep(1)
+            # Send awaiting confirmation message
             try:
-                await callback.message.edit_text(
+                await callback.message.answer(
                     get_text(key="payment_awaiting_confirmation"),
                     reply_markup=get_payment_url_keyboard(
                         payment_response_yk["confirmation_url"],
@@ -251,7 +249,7 @@ async def _initiate_yk_payment(
                     ),
                     disable_web_page_preview=False,
                 )
-                await asyncio.sleep(1)
+                # Send awaiting confirmation message
                 try:
                     await callback.message.answer(
                         get_text(key="payment_awaiting_confirmation"),
@@ -976,7 +974,6 @@ async def pay_fk_callback_handler(
                     ),
                     disable_web_page_preview=False,
                 )
-                await asyncio.sleep(1)
                 try:
                     await callback.message.edit_text(
                         get_text(key="payment_awaiting_confirmation"),
@@ -1005,7 +1002,6 @@ async def pay_fk_callback_handler(
                         ),
                         disable_web_page_preview=False,
                     )
-                    await asyncio.sleep(1)
                     try:
                         await callback.message.answer(
                             get_text(key="payment_awaiting_confirmation"),
@@ -1184,7 +1180,6 @@ async def pay_platega_callback_handler(
                     ),
                     disable_web_page_preview=False,
                 )
-                await asyncio.sleep(1)
                 try:
                     await callback.message.edit_text(
                         get_text(key="payment_awaiting_confirmation"),
@@ -1213,7 +1208,6 @@ async def pay_platega_callback_handler(
                         ),
                         disable_web_page_preview=False,
                     )
-                    await asyncio.sleep(1)
                     try:
                         await callback.message.answer(
                             get_text(key="payment_awaiting_confirmation"),
@@ -1394,7 +1388,6 @@ async def pay_platega_card_callback_handler(
                     ),
                     disable_web_page_preview=False,
                 )
-                await asyncio.sleep(1)
                 try:
                     await callback.message.edit_text(
                         get_text(key="payment_awaiting_confirmation"),
@@ -1423,7 +1416,6 @@ async def pay_platega_card_callback_handler(
                         ),
                         disable_web_page_preview=False,
                     )
-                    await asyncio.sleep(1)
                     try:
                         await callback.message.answer(
                             get_text(key="payment_awaiting_confirmation"),
@@ -1545,7 +1537,6 @@ async def pay_crypto_callback_handler(
                 ),
                 disable_web_page_preview=False,
             )
-            await asyncio.sleep(1)
             try:
                 await callback.message.edit_text(
                     get_text(key="payment_awaiting_confirmation"),
@@ -1573,7 +1564,6 @@ async def pay_crypto_callback_handler(
                     ),
                     disable_web_page_preview=False,
                 )
-                await asyncio.sleep(1)
                 try:
                     await callback.message.answer(
                         get_text(key="payment_awaiting_confirmation"),
