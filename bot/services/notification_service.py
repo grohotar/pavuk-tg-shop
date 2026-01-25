@@ -187,10 +187,6 @@ class NotificationService:
             source_text=source_text,
             timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         )
-            referral_text=referral_text,
-            source_text=source_text,
-            timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        )
 
         # Send to log channel
         profile_keyboard = self._build_profile_keyboard(_, user_id, referred_by_id)
