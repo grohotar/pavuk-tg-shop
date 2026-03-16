@@ -926,8 +926,6 @@ class SubscriptionService:
         if traffic_limit_bytes is not None:
             payload["trafficLimitBytes"] = traffic_limit_bytes
             payload["trafficLimitStrategy"] = self.settings.USER_TRAFFIC_STRATEGY
-        if self.settings.parsed_user_squad_uuids:
-            payload["activeInternalSquads"] = self.settings.parsed_user_squad_uuids
-        if self.settings.parsed_user_external_squad_uuid:
-            payload["externalSquadUuid"] = self.settings.parsed_user_external_squad_uuid
+        # Preserve squads already assigned in Remnawave during renewals and updates.
+        # Default squads are applied only when creating a new panel user.
         return payload
