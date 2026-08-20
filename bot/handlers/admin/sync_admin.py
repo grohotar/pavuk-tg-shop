@@ -72,15 +72,15 @@ async def perform_sync(
             try:
                 panel_records_checked += 1
                 panel_uuid = panel_user_dict.get("uuid")
-                panel_subscription_uuid = panel_user_dict.get("subscriptionUuid") or panel_user_dict.get(
-                    "shortUuid"
-                )
+                panel_id = panel_user_dict.get("id")
+                if panel_id is not None:
+                    panel_id = int(panel_id)
                 telegram_id_from_panel = panel_user_dict.get("telegramId")
 
-                if not panel_uuid:
-                    sync_errors.append(f"Panel user missing UUID: {panel_user_dict}")
+                if panel_id is None and not panel_uuid:
+                    sync_errors.append(f"Panel user missing ID: {panel_user_dict}")
                     logging.warning(
-                        f"Skipping panel user without UUID: {panel_user_dict}"
+                        f"Skipping panel user without a supported ID: {panel_user_dict}"
                     )
                     continue
 
@@ -101,8 +101,12 @@ async def perform_sync(
                             f"Found user by telegramId {telegram_id_from_panel}"
                         )
 
-                # If not found by telegram ID, try to find by panel UUID
-                if not existing_user:
+                # If not found by telegram ID, try both Remnawave identifiers.
+                if not existing_user and panel_id is not None:
+                    existing_user = await user_dal.get_user_by_panel_id(
+                        session, panel_id
+                    )
+                if not existing_user and panel_uuid:
                     existing_user = await user_dal.get_user_by_panel_uuid(
                         session, panel_uuid
                     )
@@ -131,6 +135,7 @@ async def perform_sync(
                                 "last_name": None,  # Panel doesn't provide this info
                                 "language_code": "ru",  # Default language
                                 "panel_user_uuid": panel_uuid,
+                                "panel_user_id": panel_id,
                                 "is_banned": False,
                                 "referred_by_id": None,
                             }
@@ -167,8 +172,13 @@ async def perform_sync(
                 # Get the actual user_id for subscription operations
                 actual_user_id = existing_user.user_id
 
-                # Update panel UUID if different
-                if existing_user.panel_user_uuid != panel_uuid:
+                if panel_uuid and existing_user.panel_user_uuid != panel_uuid:
+                    conflict = await user_dal.get_user_by_panel_uuid(session, panel_uuid)
+                    if conflict and conflict.user_id != actual_user_id:
+                        sync_errors.append(
+                            f"Panel UUID {panel_uuid} is already linked to user {conflict.user_id}"
+                        )
+                        continue
                     existing_user.panel_user_uuid = panel_uuid
                     user_was_updated = True
                     users_uuid_updated += 1
@@ -176,9 +186,22 @@ async def perform_sync(
                         f"Updated panel UUID for user {actual_user_id}: {panel_uuid}"
                     )
 
+                if panel_id is not None and existing_user.panel_user_id != panel_id:
+                    conflict = await user_dal.get_user_by_panel_id(session, panel_id)
+                    if conflict and conflict.user_id != actual_user_id:
+                        sync_errors.append(
+                            f"Panel ID {panel_id} is already linked to user {conflict.user_id}"
+                        )
+                        continue
+                    existing_user.panel_user_id = panel_id
+                    user_was_updated = True
+
                 # Ensure panel description contains Telegram fields
                 try:
-                    if panel_uuid and existing_user:
+                    if existing_user:
+                        panel_user_ref = await panel_service.resolve_user_ref(
+                            user_uuid=panel_uuid, user_id=panel_id
+                        )
                         description_text = "\n".join(
                             [
                                 existing_user.username or "",
@@ -191,12 +214,12 @@ async def perform_sync(
                             panel_user_dict.get("description") or ""
                         ).strip()
                         desired_description = description_text.strip()
-                        if (
+                        if panel_user_ref is not None and (
                             desired_description
                             and desired_description != current_panel_description
                         ):
                             await panel_service.update_user_details_on_panel(
-                                panel_uuid, {"description": description_text}
+                                panel_user_ref, {"description": description_text}
                             )
                 except Exception as e_desc:
                     logging.warning(
@@ -225,7 +248,7 @@ async def perform_sync(
                                 await session.execute(
                                     update(Subscription)
                                     .where(
-                                        Subscription.panel_user_uuid == panel_uuid,
+                                        Subscription.user_id == actual_user_id,
                                         Subscription.is_active.is_(True),
                                         or_(
                                             Subscription.panel_subscription_uuid
@@ -258,6 +281,7 @@ async def perform_sync(
                                 update_payload = {
                                     "user_id": actual_user_id,
                                     "panel_user_uuid": panel_uuid,
+                                    "panel_user_id": panel_id,
                                     "end_date": panel_expire_at,
                                     "is_active": panel_status == "ACTIVE",
                                     "status_from_panel": panel_status,
@@ -285,6 +309,7 @@ async def perform_sync(
                                 sub_payload = {
                                     "user_id": actual_user_id,
                                     "panel_user_uuid": panel_uuid,
+                                    "panel_user_id": panel_id,
                                     "panel_subscription_uuid": subscription_uuid_from_panel,
                                     # Do not guess precise start_date from panel; keep nullable
                                     "start_date": None,
@@ -309,7 +334,7 @@ async def perform_sync(
                             # No subscription UUID from panel: only update an already active subscription for this user/panel UUID
                             active_sub = (
                                 await subscription_dal.get_active_subscription_by_user_id(
-                                    session, actual_user_id, panel_uuid
+                                    session, actual_user_id
                                 )
                             )
                             if active_sub:
@@ -360,7 +385,7 @@ async def perform_sync(
 
             except Exception as e_user:
                 sync_errors.append(
-                    f"Error processing panel user {panel_user_dict.get('uuid', 'unknown')}: {str(e_user)}"
+                    f"Error processing panel user {panel_user_dict.get('id') or panel_user_dict.get('uuid', 'unknown')}: {str(e_user)}"
                 )
                 logging.error(f"Error syncing user: {e_user}")
 

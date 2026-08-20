@@ -45,16 +45,23 @@ class ProfileSyncMiddleware(BaseMiddleware):
                         # Also update description on panel if linked
                         try:
                             panel_service = data.get("panel_service")
-                            if panel_service and db_user.panel_user_uuid:
+                            if panel_service and (
+                                db_user.panel_user_uuid or db_user.panel_user_id is not None
+                            ):
                                 description_text = "\n".join([
                                     username_for_display(tg_user.username, with_at=False) if sanitized_username is not None else "",
                                     sanitized_first_name or "",
                                     sanitized_last_name or "",
                                 ]).strip()
-                                await panel_service.update_user_details_on_panel(
-                                    db_user.panel_user_uuid,
-                                    {"description": description_text},
+                                panel_user_ref = await panel_service.resolve_user_ref(
+                                    user_uuid=db_user.panel_user_uuid,
+                                    user_id=db_user.panel_user_id,
                                 )
+                                if panel_user_ref is not None:
+                                    await panel_service.update_user_details_on_panel(
+                                        panel_user_ref,
+                                        {"description": description_text},
+                                    )
                         except Exception as e_upd_desc:
                             logging.warning(
                                 f"ProfileSyncMiddleware: Failed to update panel description for user {tg_user.id}: {e_upd_desc}"
@@ -66,4 +73,3 @@ class ProfileSyncMiddleware(BaseMiddleware):
                 )
 
         return await handler(event, data)
-

@@ -90,13 +90,18 @@ class PanelWebhookService:
                     )
                     # Update panel expiry to ensure actual service access is extended
                     try:
+                        panel_user_ref = await self.panel_service.resolve_user_ref(
+                            user_uuid=sub.panel_user_uuid,
+                            user_id=sub.panel_user_id,
+                        )
+                        if panel_user_ref is None:
+                            raise ValueError("Subscription has no compatible panel user ID")
                         panel_payload = {
-                            "uuid": sub.panel_user_uuid,
                             "expireAt": new_end_date.isoformat(timespec='milliseconds').replace('+00:00', 'Z'),
                             "status": "ACTIVE",
                         }
                         panel_update_resp = await self.panel_service.update_user_details_on_panel(
-                            sub.panel_user_uuid,
+                            panel_user_ref,
                             panel_payload,
                             log_response=True,
                         )
@@ -170,7 +175,16 @@ class PanelWebhookService:
             await session.rollback()
             return False
 
-    async def handle_event(self, event_name: str, user_payload: dict):
+    async def handle_event(self, event_name: str, user_payload: dict, meta: Optional[dict] = None):
+        if event_name == "user.expiration":
+            hours = (meta or {}).get("expiration")
+            event_name = {
+                -72: "user.expires_in_72_hours",
+                -48: "user.expires_in_48_hours",
+                -24: "user.expires_in_24_hours",
+                24: "user.expired_24_hours_ago",
+            }.get(hours, event_name)
+
         telegram_id = user_payload.get("telegramId")
         if not telegram_id:
             logging.warning("Panel webhook without telegramId received")
@@ -244,7 +258,8 @@ class PanelWebhookService:
                 )
         elif event_name == "user.expired":
             # Check if this is a tribute user that should be auto-renewed (regardless of notification settings)
-            auto_renewed = await self._handle_expired_subscription(session, user_id, user_payload, lang, markup, first_name)
+            async with self.async_session_factory() as session:
+                auto_renewed = await self._handle_expired_subscription(session, user_id, user_payload, lang, markup, first_name)
             
             # If auto-renewed via Tribute, suppress expiration notification. Otherwise, send it if enabled.
             if not auto_renewed and self.settings.SUBSCRIPTION_NOTIFY_ON_EXPIRE:
@@ -284,6 +299,7 @@ class PanelWebhookService:
             return web.Response(status=400, text="bad_request")
 
         event_name = payload.get("name") or payload.get("event")
+        meta = payload.get("meta")
         user_data = payload.get("payload") or payload.get("data", {})
         if isinstance(user_data, dict) and "user" in user_data:
             user_data = user_data.get("user") or user_data
@@ -299,7 +315,7 @@ class PanelWebhookService:
             telegram_id if telegram_id is not None else "N/A",
         )
 
-        await self.handle_event(event_name, user_data)
+        await self.handle_event(event_name, user_data, meta)
         return web.Response(status=200, text="ok")
 
 async def panel_webhook_route(request: web.Request):

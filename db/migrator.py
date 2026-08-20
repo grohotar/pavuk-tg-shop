@@ -112,6 +112,37 @@ def _migration_0003_normalize_referral_codes(connection: Connection) -> None:
         )
     )
 
+
+def _migration_0004_add_remnawave_v3_user_ids(connection: Connection) -> None:
+    inspector = inspect(connection)
+    user_columns = {col["name"] for col in inspector.get_columns("users")}
+    subscription_columns = {
+        col["name"] for col in inspector.get_columns("subscriptions")
+    }
+
+    if "panel_user_id" not in user_columns:
+        connection.execute(text("ALTER TABLE users ADD COLUMN panel_user_id BIGINT"))
+    if "panel_user_id" not in subscription_columns:
+        connection.execute(
+            text("ALTER TABLE subscriptions ADD COLUMN panel_user_id BIGINT")
+        )
+
+    connection.execute(
+        text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_panel_user_id "
+            "ON users (panel_user_id)"
+        )
+    )
+    connection.execute(
+        text(
+            "CREATE INDEX IF NOT EXISTS ix_subscriptions_panel_user_id "
+            "ON subscriptions (panel_user_id)"
+        )
+    )
+    connection.execute(
+        text("ALTER TABLE subscriptions ALTER COLUMN panel_user_uuid DROP NOT NULL")
+    )
+
 MIGRATIONS: List[Migration] = [
     Migration(
         id="0001_add_channel_subscription_fields",
@@ -127,6 +158,11 @@ MIGRATIONS: List[Migration] = [
         id="0003_normalize_referral_codes",
         description="Normalize referral codes to uppercase for consistent lookups",
         upgrade=_migration_0003_normalize_referral_codes,
+    ),
+    Migration(
+        id="0004_add_remnawave_v3_user_ids",
+        description="Store numeric Remnawave user IDs alongside legacy UUIDs",
+        upgrade=_migration_0004_add_remnawave_v3_user_ids,
     ),
 ]
 

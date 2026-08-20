@@ -129,10 +129,10 @@ async def upsert_subscription(session: AsyncSession,
 
 
 async def deactivate_other_active_subscriptions(
-        session: AsyncSession, panel_user_uuid: str,
+        session: AsyncSession, user_id: int,
         current_panel_subscription_uuid: Optional[str]):
     stmt = (update(Subscription).where(
-        Subscription.panel_user_uuid == panel_user_uuid,
+        Subscription.user_id == user_id,
         Subscription.is_active == True,
     ).values(is_active=False, status_from_panel="INACTIVE_BY_BOT_SYNC"))
     if current_panel_subscription_uuid:
@@ -142,7 +142,7 @@ async def deactivate_other_active_subscriptions(
     result = await session.execute(stmt)
     if result.rowcount > 0:
         logging.info(
-            f"Deactivated {result.rowcount} other active subscriptions for panel_user_uuid {panel_user_uuid}."
+            f"Deactivated {result.rowcount} other active subscriptions for user {user_id}."
         )
 
 
@@ -238,6 +238,5 @@ async def find_subscription_for_notification_update(
         <= subscription_end_date_to_match + timedelta(seconds=1)).limit(1)
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
-
 
 

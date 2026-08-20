@@ -282,7 +282,7 @@ class TributeService:
 
             active_subscriptions = await subscription_dal.get_active_subscriptions_for_user(session, user_id)
 
-            panel_users_updated: set[str] = set()
+            panel_users_updated = set()
             for sub in active_subscriptions:
                 updated_sub = await subscription_dal.update_subscription(
                     session,
@@ -294,21 +294,26 @@ class TributeService:
                     },
                 )
 
-                panel_uuid = updated_sub.panel_user_uuid if updated_sub else None
-                if panel_uuid and panel_uuid not in panel_users_updated:
-                    panel_users_updated.add(panel_uuid)
+                panel_user_ref = None
+                if updated_sub:
+                    panel_user_ref = await self.panel_service.resolve_user_ref(
+                        user_uuid=updated_sub.panel_user_uuid,
+                        user_id=updated_sub.panel_user_id,
+                    )
+                if panel_user_ref is not None and panel_user_ref not in panel_users_updated:
+                    panel_users_updated.add(panel_user_ref)
                     panel_payload = {
                         "expireAt": grace_end.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
                     }
                     try:
                         await self.panel_service.update_user_details_on_panel(
-                            panel_uuid,
+                            panel_user_ref,
                             panel_payload,
                             log_response=False,
                         )
                     except Exception as panel_err:
                         logging.error(
-                            f"Failed to update panel expiry for user {user_id} (panel_uuid {panel_uuid}) during Tribute cancellation: {panel_err}")
+                            f"Failed to update panel expiry for user {user_id} (panel user {panel_user_ref}) during Tribute cancellation: {panel_err}")
 
             await session.commit()
             

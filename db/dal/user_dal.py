@@ -89,6 +89,14 @@ async def get_user_by_panel_uuid(
     return result.scalar_one_or_none()
 
 
+async def get_user_by_panel_id(
+    session: AsyncSession, panel_user_id: int
+) -> Optional[User]:
+    stmt = select(User).where(User.panel_user_id == panel_user_id)
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
+
+
 ## Removed unused generic get_user helper to keep DAL explicit and simple
 
 
@@ -204,7 +212,9 @@ async def get_all_active_user_ids_for_broadcast(session: AsyncSession) -> List[i
 
 
 async def get_all_users_with_panel_uuid(session: AsyncSession) -> List[User]:
-    stmt = select(User).where(User.panel_user_uuid.is_not(None))
+    stmt = select(User).where(
+        or_(User.panel_user_uuid.is_not(None), User.panel_user_id.is_not(None))
+    )
     result = await session.execute(stmt)
     return result.scalars().all()
 
