@@ -25,6 +25,7 @@ case "${1:-}" in
   seed)   .venv/bin/python sandbox/seed.py && sandbox/deploy.sh state; exit ;;
   build)  # same steps as the mini app Dockerfile (pnpm 10.11.0, frozen lockfile, next build, standalone)
           command -v pnpm >/dev/null || npm i -g -s pnpm@10.11.0
+          cp "$APP_DIR/sandbox/prod-app-config.json" "$APP_DIR/public/assets/app-config.json"  # prod mounts it
           cd "$APP_DIR" && pnpm install --frozen-lockfile && pnpm run build; exit ;;
   deploy) "$0" build && sandbox/deploy.sh; exit ;;
   local)
