@@ -1,3 +1,4 @@
+import os
 import logging
 import asyncio
 from typing import Dict, Any, Optional
@@ -106,6 +107,9 @@ async def on_startup_configured(dispatcher: Dispatcher):
             logging.error(
                 "STARTUP: Skipped setting Telegram webhook due to security or configuration error."
             )
+    elif os.getenv("BOT_POLLING") == "1":
+        await bot.delete_webhook(drop_pending_updates=True)
+        logging.info("STARTUP: BOT_POLLING=1, webhook removed (local sandbox).")
     else:
         logging.error(
             "STARTUP: WEBHOOK_BASE_URL not set in environment. Webhook mode is required. Exiting."
@@ -273,6 +277,20 @@ async def run_bot(settings_param: Settings):
     await register_all_routers(dp, settings_param)
 
     tg_webhook_base = settings_param.WEBHOOK_BASE_URL
+
+    # Local sandbox: polling, only ADMIN_IDS are served
+    if not tg_webhook_base and os.getenv("BOT_POLLING") == "1":
+        admins = set(settings_param.ADMIN_IDS)
+
+        @dp.update.outer_middleware()
+        async def _admins_only(handler, event, data):
+            u = data.get("event_from_user")
+            if u and u.id in admins:
+                return await handler(event, data)
+
+        logging.info("Starting bot in POLLING mode (sandbox, admins only)...")
+        await dp.start_polling(bot)
+        return
 
     # Webhook mode is now required - exit if not configured
     if not tg_webhook_base:

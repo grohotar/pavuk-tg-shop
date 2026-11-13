@@ -90,3 +90,6 @@ venv/
 
 # VS Code
 .vscode/
+
+# sandbox tooling never goes into the prod image
+sandbox/

@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import hmac
 import json
+import os
 import logging
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
@@ -43,7 +44,7 @@ class PlategaService:
         self.secret_key: Optional[str] = settings.PLATEGA_SECRET_KEY
         self.default_currency: str = (settings.DEFAULT_CURRENCY_SYMBOL or "RUB").upper()
 
-        self.api_base_url: str = "https://app.platega.io"
+        self.api_base_url: str = os.getenv("PLATEGA_API_BASE_URL", "https://app.platega.io")  # sandbox overrides
         self._timeout = ClientTimeout(total=45)
         self._session: Optional[ClientSession] = None
 
