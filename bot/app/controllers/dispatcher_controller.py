@@ -14,6 +14,7 @@ from bot.middlewares.ban_check_middleware import BanCheckMiddleware
 from bot.middlewares.action_logger_middleware import ActionLoggerMiddleware
 from bot.middlewares.profile_sync import ProfileSyncMiddleware
 from bot.middlewares.channel_subscription import ChannelSubscriptionMiddleware
+from bot.utils.button_icons import ButtonIconsMiddleware
 
 
 def build_dispatcher(settings: Settings, async_session_factory: sessionmaker) -> tuple[Dispatcher, Bot, Dict]:
@@ -24,6 +25,7 @@ def build_dispatcher(settings: Settings, async_session_factory: sessionmaker) ->
     dp = Dispatcher(storage=storage, settings=settings, bot_instance=bot)
 
     i18n_instance = get_i18n_instance(path="locales", default=settings.DEFAULT_LANGUAGE)
+    bot.session.middleware(ButtonIconsMiddleware(i18n_instance, settings.DEFAULT_LANGUAGE))
 
     dp["i18n_instance"] = i18n_instance
     dp["async_session_factory"] = async_session_factory
