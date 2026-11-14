@@ -19,7 +19,7 @@ from bot.services.platega_service import PlategaService
 from bot.services.crypto_pay_service import CryptoPayService
 from bot.services.stars_service import StarsService
 from bot.middlewares.i18n import JsonI18n
-from db.dal import payment_dal, user_billing_dal
+from db.dal import payment_dal, user_billing_dal, platega_subscription_dal
 
 router = Router(name="user_subscription_payments_router")
 
@@ -1562,3 +1562,60 @@ async def handle_successful_stars_payment(
         stars_amount=stars_amount,
         i18n_data=i18n_data,
     )
+
+
+def autopay_period(months: int) -> Tuple[str, str]:
+    """(title, every): (\"1 месяц\", \"месяц\"), (\"3 месяца\", \"3 месяца\"), (\"6 месяцев\", \"6 месяцев\")."""
+    if months == 1:
+        return "1 месяц", "месяц"
+    word = "месяца" if months % 10 in (2, 3, 4) and not 12 <= months % 100 <= 14 else "месяцев"
+    return f"{months} {word}", f"{months} {word}"
+
+
+@router.callback_query(F.data.startswith("pay_platega_sub:"))
+async def pay_platega_sub_callback_handler(
+    callback: types.CallbackQuery,
+    settings: Settings,
+    i18n_data: dict,
+    platega_service: PlategaService,
+    session: AsyncSession,
+):
+    """Autopay: create a Platega subscription; the first charge happens on the payer's consent."""
+    i18n: JsonI18n = i18n_data.get("i18n_instance")
+    get_text = lambda key, **kw: i18n.gettext(settings.DEFAULT_LANGUAGE, key, **kw)
+    if not platega_service or not platega_service.configured or not settings.PLATEGA_SUBSCRIPTION_ENABLED:
+        await callback.answer(get_text("payment_service_unavailable_alert"), show_alert=True)
+        return
+    try:
+        _, months_str, price_str = callback.data.split(":")
+        months, price = int(months_str), float(price_str)
+    except ValueError:
+        await callback.answer(get_text("error_try_again"), show_alert=True)
+        return
+    user_id = callback.from_user.id
+
+    if await platega_subscription_dal.get_live_for_user(session, user_id):
+        await callback.answer(get_text("autopay_already_on"), show_alert=True)
+        return
+
+    title, every = autopay_period(months)
+    ok, data = await platega_service.create_subscription(
+        user_id=user_id, months=months, amount=price,
+        description=f"Pipun VPN — автопродление, {title}")
+    sub_id, url = data.get("transactionId"), data.get("redirect")
+    if not ok or not sub_id or not url:
+        logging.error(f"Platega autopay: create failed for user {user_id}: {data}")
+        await callback.answer(get_text("error_try_again"), show_alert=True)
+        return
+    await platega_subscription_dal.create(session, subscription_id=str(sub_id), user_id=user_id,
+                                          months=months, amount=price, status="pending")
+    await session.commit()
+
+    markup = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=get_text("autopay_subscribe_button"), url=url)],
+        [InlineKeyboardButton(text=get_text("back_to_payment_methods_button"), callback_data=f"subscribe_period:{months}")],
+    ])
+    await callback.message.edit_text(
+        get_text("autopay_offer", title=title, every=every, amount=f"{price:.0f}"),
+        reply_markup=markup, disable_web_page_preview=True)
+    await callback.answer()

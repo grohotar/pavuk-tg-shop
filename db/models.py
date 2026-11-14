@@ -267,3 +267,18 @@ class AdAttribution(Base):
 
     user = relationship("User")
     campaign = relationship("AdCampaign", back_populates="attributions")
+
+
+class PlategaSubscription(Base):
+    """Platega recurring SBP subscription (autopay). One row per Platega subscription id."""
+    __tablename__ = "platega_subscriptions"
+
+    subscription_id = Column(String, primary_key=True)  # Platega subscription id (uuid)
+    user_id = Column(BigInteger, ForeignKey("users.user_id"), nullable=False, index=True)
+    months = Column(Integer, nullable=False)
+    amount = Column(Float, nullable=False)
+    # pending -> active <-> past_due -> cancelled | failed
+    status = Column(String, nullable=False, default="pending", index=True)
+    next_charge_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)

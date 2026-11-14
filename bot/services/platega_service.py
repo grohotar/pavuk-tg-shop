@@ -18,7 +18,8 @@ from bot.services.subscription_service import SubscriptionService
 from bot.services.referral_service import ReferralService
 from bot.keyboards.inline.user_keyboards import get_connect_and_main_keyboard
 from bot.services.notification_service import NotificationService
-from db.dal import payment_dal, user_dal
+from db.dal import payment_dal, user_dal, platega_subscription_dal
+from bot.keyboards.inline.user_keyboards import get_subscribe_only_markup
 from bot.utils.text_sanitizer import sanitize_display_name, username_for_display
 
 
@@ -171,6 +172,101 @@ class PlategaService:
             logging.error("Platega check_status: request failed: %s", exc, exc_info=True)
             return False, {"message": str(exc)}
 
+    # ---------------- autopay (Platega subscription, paymentMethod 6) ----------------
+
+    async def _api(self, method: str, path: str, body: Optional[Dict[str, Any]] = None) -> Tuple[bool, Dict[str, Any]]:
+        session = await self._get_session()
+        headers = {"X-MerchantId": self.merchant_id, "X-Secret": self.secret_key, "Content-Type": "application/json"}
+        try:
+            async with session.request(method, f"{self.api_base_url}{path}", json=body, headers=headers) as resp:
+                text = await resp.text()
+                try:
+                    data = json.loads(text) if text else {}
+                except json.JSONDecodeError:
+                    data = {"raw": text}
+                if resp.status not in (200, 201):
+                    logging.error("Platega %s %s: HTTP %s %s", method, path, resp.status, data)
+                    return False, data
+                return True, data
+        except Exception as exc:
+            logging.error("Platega %s %s failed: %s", method, path, exc, exc_info=True)
+            return False, {"message": str(exc)}
+
+    async def create_subscription(self, *, user_id: int, months: int, amount: float, description: str) -> Tuple[bool, Dict[str, Any]]:
+        """Autopay: Platega charges `amount` every `months` months via SBP. First charge on payer's consent."""
+        return await self._api("POST", "/transaction/process", {
+            "paymentMethod": 6,
+            "paymentDetails": {"amount": int(amount), "currency": self.default_currency,
+                               "interval": "3", "intervalCount": months},  # 3 = month
+            "description": description,
+            "payload": f"autopay;user_id:{user_id};months:{months}",
+            "return": "https://t.me/pipun_bot",
+            "failedUrl": "https://t.me/pipun_bot",
+        })
+
+    async def cancel_subscription(self, subscription_id: str) -> bool:
+        ok, _ = await self._api("POST", f"/subscription/{subscription_id}/cancel")
+        return ok
+
+    @staticmethod
+    def _parse_dt(value: Any) -> Optional[datetime]:
+        try:
+            return datetime.fromisoformat(str(value).replace("Z", "+00:00")) if value else None
+        except ValueError:
+            return None
+
+    async def _payment_for_subscription_charge(self, session, sub_id: str, transaction_id: str, payload: Dict[str, Any]):
+        sub = await platega_subscription_dal.get(session, sub_id)
+        if not sub:
+            logging.error(f"Platega autopay: charge {transaction_id} for unknown subscription {sub_id}")
+            return None
+        sub.status = "active"
+        sub.next_charge_at = self._parse_dt(payload.get("nextChargeAt")) or sub.next_charge_at
+        return await payment_dal.create_payment_record(session, {
+            "user_id": sub.user_id,
+            "amount": float(payload.get("amount") or sub.amount),
+            "currency": payload.get("currency") or self.default_currency,
+            "status": "pending_platega",
+            "description": f"Автопродление, {sub.months} мес.",
+            "subscription_duration_months": sub.months,
+            "provider": "platega",
+            "provider_payment_id": transaction_id,
+        })
+
+    async def _notify(self, user_id: int, key: str, markup=None, **kw) -> None:
+        try:
+            await self.bot.send_message(user_id, self.i18n.gettext(self.settings.DEFAULT_LANGUAGE, key, **kw),
+                                        reply_markup=markup, parse_mode="HTML")
+        except Exception as e:
+            logging.error(f"Platega autopay: failed to notify {user_id}: {e}")
+
+    async def _on_subscription_status(self, sub_id: str, status: str, payload: Dict[str, Any]) -> None:
+        async with self.async_session_factory() as session:
+            sub = await platega_subscription_dal.get(session, sub_id)
+            if not sub:
+                logging.warning(f"Platega autopay: {status} for unknown subscription {sub_id}")
+                return
+            prev = sub.status
+            sub.status = {"SUBSCRIPTION_ACTIVATED": "active", "SUBSCRIPTION_PAST_DUE": "past_due",
+                          "SUBSCRIPTION_CANCELLED": "cancelled", "SUBSCRIPTION_FAILED": "failed"}.get(status, prev)
+            sub.next_charge_at = self._parse_dt(payload.get("nextChargeAt")) or sub.next_charge_at
+            await session.commit()
+            logging.info(f"Platega autopay: subscription {sub_id} {prev} -> {sub.status} ({status})")
+            # Cancelled outside the bot (payer via bank/e-mail): tell the user. Bot-side cancel already said so.
+            if status == "SUBSCRIPTION_CANCELLED" and prev != "cancelled":
+                await self._notify(sub.user_id, "autopay_cancelled_external")
+
+    async def _on_subscription_charge_failed(self, sub_id: str) -> None:
+        async with self.async_session_factory() as session:
+            sub = await platega_subscription_dal.get(session, sub_id)
+            if not sub:
+                return
+            sub.status = "past_due"
+            await session.commit()
+            await self._notify(sub.user_id, "autopay_charge_failed",
+                               markup=get_subscribe_only_markup(self.settings.DEFAULT_LANGUAGE, self.i18n),
+                               amount=f"{sub.amount:.0f}")
+
     async def _get_session(self) -> ClientSession:
         if self._session is None or self._session.closed:
             self._session = ClientSession(timeout=self._timeout)
@@ -218,6 +314,10 @@ class PlategaService:
         except Exception as e:
             logging.error(f"Platega webhook: failed to read JSON: {e}")
             return web.Response(status=400, text="bad_request")
+        return await self.process_callback(payload)
+
+    async def process_callback(self, payload: Dict[str, Any]) -> web.Response:
+        """Handle one Platega callback body (already authenticated)."""
 
         # Log incoming webhook data for debugging
         logging.info(f"Platega webhook received payload: {payload}")
@@ -248,6 +348,15 @@ class PlategaService:
             logging.error(f"Platega webhook: missing required fields. transaction_id={transaction_id}, status={status}")
             return web.Response(status=400, text="missing_data")
 
+        # Autopay (Platega subscription): status events and failed charges
+        sub_id = payload.get("subscriptionId")
+        if str(status).startswith("SUBSCRIPTION_"):
+            await self._on_subscription_status(sub_id or transaction_id, status, payload)
+            return web.Response(text="OK")
+        if sub_id and status == "CANCELED":
+            await self._on_subscription_charge_failed(sub_id)
+            return web.Response(text="OK")
+
         # Only process CONFIRMED payments
         if status != "CONFIRMED":
             logging.info(f"Platega webhook: payment {transaction_id} status is {status}, ignoring")
@@ -268,12 +377,16 @@ class PlategaService:
             if not payment:
                 payment = await payment_dal.get_payment_by_provider_payment_id(session, str(transaction_id))
             
+            # A charge of an autopay subscription has no payment record yet: create it
+            if not payment and sub_id:
+                payment = await self._payment_for_subscription_charge(session, sub_id, str(transaction_id), payload)
+
             if not payment:
                 logging.error(f"Platega webhook: payment not found for transaction_id={transaction_id}, order_id={order_id_str}")
                 return web.Response(status=404, text="payment_not_found")
 
             if payment.status == "succeeded":
-                logging.info(f"Platega webhook: payment {payment_db_id} already succeeded")
+                logging.info(f"Platega webhook: payment {payment.payment_id} already succeeded")
                 return web.Response(text="OK")
 
             # Optional amount verification
@@ -283,11 +396,11 @@ class PlategaService:
                     expected_amount = Decimal(str(payment.amount)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
                     if amount_decimal.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) != expected_amount:
                         logging.warning(
-                            f"Platega webhook: amount mismatch for payment {payment_db_id} "
+                            f"Platega webhook: amount mismatch for payment {payment.payment_id} "
                             f"(expected {expected_amount}, got {amount_decimal})"
                         )
                 except Exception as e:
-                    logging.warning(f"Platega webhook: failed to compare amount for payment {payment_db_id}: {e}")
+                    logging.warning(f"Platega webhook: failed to compare amount for payment {payment.payment_id}: {e}")
 
             activation = None
             referral_bonus = None
@@ -321,10 +434,10 @@ class PlategaService:
                 await session.commit()
             except Exception as e:
                 await session.rollback()
-                logging.error(f"Platega webhook: failed to process payment {payment_db_id}: {e}", exc_info=True)
+                logging.error(f"Platega webhook: failed to process payment {payment.payment_id}: {e}", exc_info=True)
                 return web.Response(status=500, text="processing_error")
 
-            db_user = payment.user or await user_dal.get_user_by_id(session, payment.user_id)
+            db_user = await user_dal.get_user_by_id(session, payment.user_id)
             lang = db_user.language_code if db_user and db_user.language_code else self.settings.DEFAULT_LANGUAGE
             _ = lambda k, **kw: self.i18n.gettext(lang, k, **kw) if self.i18n else k
 
@@ -391,6 +504,11 @@ class PlategaService:
             )
             if order_info_text:
                 text = f"{order_info_text}\n{text}"
+            if sub_id:
+                sub = await platega_subscription_dal.get(session, sub_id)
+                if sub and sub.next_charge_at:
+                    text += "\n\n" + _("autopay_next_charge_line", date=sub.next_charge_at.strftime("%d.%m.%Y"),
+                                       amount=f"{sub.amount:.0f}")
 
             markup = get_connect_and_main_keyboard(
                 lang,

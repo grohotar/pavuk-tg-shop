@@ -16,7 +16,8 @@ from bot.keyboards.inline.user_keyboards import (
 from bot.services.subscription_service import SubscriptionService
 from bot.services.panel_api_service import PanelApiService
 from bot.middlewares.i18n import JsonI18n
-from db.dal import subscription_dal, user_billing_dal
+from db.dal import subscription_dal, user_billing_dal, platega_subscription_dal
+from bot.services.platega_service import PlategaService
 from db.models import Subscription
 
 router = Router(name="user_subscription_core_router")
@@ -177,6 +178,14 @@ async def my_subscription_command_handler(
     traffic_line = get_text("subscription_traffic_limited", used=_gb(used), limit=_gb(limit)) if limit else \
         get_text("subscription_traffic_unlimited", used=_gb(used))
 
+    autopay = await platega_subscription_dal.get_live_for_user(session, event.from_user.id)
+    if autopay:
+        status_line = status_line.split("\n")[0]  # no "renew in advance" hint: autopay charges by itself
+        status_line += "\n" + (
+            get_text("autopay_status_active", date=autopay.next_charge_at.strftime("%d.%m.%Y"),
+                     amount=f"{autopay.amount:.0f}")
+            if autopay.status == "active" and autopay.next_charge_at else get_text("autopay_status_past_due"))
+
     text = get_text(
         "my_subscription_details",
         status_line=status_line,
@@ -215,6 +224,9 @@ async def my_subscription_command_handler(
             if connect_btn:
                 prepend_rows.append([connect_btn])
             prepend_rows.append([renew_btn])
+        if autopay:
+            prepend_rows.append([InlineKeyboardButton(text=get_text("autopay_disable_button"),
+                                                      callback_data="autopay:disable")])
 
         if settings.MY_DEVICES_SECTION_ENABLED:
             max_devices_value = active.get("max_devices")
@@ -628,3 +640,40 @@ async def connect_command_handler(
 ):
     logging.info(f"User {message.from_user.id} used /connect command.")
     await my_subscription_command_handler(message, i18n_data, settings, panel_service, subscription_service, session, bot)
+
+
+@router.callback_query(F.data == "autopay:disable")
+async def autopay_disable_confirm_handler(callback: types.CallbackQuery, settings: Settings, i18n_data: dict,
+                                          session: AsyncSession):
+    i18n: JsonI18n = i18n_data.get("i18n_instance")
+    get_text = lambda key, **kw: i18n.gettext(settings.DEFAULT_LANGUAGE, key, **kw)
+    local_sub = await subscription_dal.get_active_subscription_by_user_id(session, callback.from_user.id)
+    end_date = local_sub.end_date.strftime("%d.%m.%Y") if local_sub and local_sub.end_date else "—"
+    await callback.message.edit_text(
+        get_text("autopay_disable_confirm", end_date=end_date),
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=get_text("autopay_disable_confirm_button"), callback_data="autopay:disable_ok")],
+            [InlineKeyboardButton(text=get_text("back_to_main_menu_button"), callback_data="main_action:my_subscription")],
+        ]))
+    await callback.answer()
+
+
+@router.callback_query(F.data == "autopay:disable_ok")
+async def autopay_disable_handler(callback: types.CallbackQuery, settings: Settings, i18n_data: dict,
+                                  session: AsyncSession, platega_service: PlategaService):
+    i18n: JsonI18n = i18n_data.get("i18n_instance")
+    get_text = lambda key, **kw: i18n.gettext(settings.DEFAULT_LANGUAGE, key, **kw)
+    autopay = await platega_subscription_dal.get_live_for_user(session, callback.from_user.id)
+    if autopay and not await platega_service.cancel_subscription(autopay.subscription_id):
+        await callback.answer(get_text("autopay_disable_error"), show_alert=True)
+        return
+    if autopay:
+        autopay.status = "cancelled"
+        await session.commit()
+    local_sub = await subscription_dal.get_active_subscription_by_user_id(session, callback.from_user.id)
+    end_date = local_sub.end_date.strftime("%d.%m.%Y") if local_sub and local_sub.end_date else "—"
+    await callback.message.edit_text(
+        get_text("autopay_disabled", end_date=end_date),
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=get_text("back_to_main_menu_button"), callback_data="main_action:my_subscription")]]))
+    await callback.answer()
