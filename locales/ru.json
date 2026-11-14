@@ -501,5 +501,6 @@
   "subscription_traffic_unlimited": "Использовано <b>{used}</b>, без ограничений",
   "subscription_traffic_limited": "Использовано <b>{used}</b> из <b>{limit}</b>",
   "renew_short_button": "Продлить",
-  "payment_successful_with_promo_full": "<b>Оплата прошла — подписка активна</b>\nСрок: {months} мес. и ещё <b>+{bonus_days} дн.</b> по промокоду, до <b>{end_date}</b>.\n\nНажмите «Подключиться» — откроется инструкция для вашего устройства.\n\nСсылка на подписку (нажмите, чтобы скопировать):\n<code>{config_link}</code>"
+  "payment_successful_with_promo_full": "<b>Оплата прошла — подписка активна</b>\nСрок: {months} мес. и ещё <b>+{bonus_days} дн.</b> по промокоду, до <b>{end_date}</b>.\n\nНажмите «Подключиться» — откроется инструкция для вашего устройства.\n\nСсылка на подписку (нажмите, чтобы скопировать):\n<code>{config_link}</code>",
+  "renewal_adds_to_current_term": "Сейчас подписка активна до <b>{end_date}</b>. Новый срок добавится к текущему — оставшиеся дни не пропадут."
 }

@@ -3,7 +3,7 @@ from aiogram import Router, F, types, Bot
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from typing import Optional, Union
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -41,6 +41,15 @@ async def display_subscription_options(event: Union[types.Message, types.Callbac
 
     currency_symbol_val = settings.DEFAULT_CURRENCY_SYMBOL
     text_content = get_text("select_subscription_period") if settings.subscription_options else get_text("no_subscription_options_available")
+    # Renewal adds to the current term (activate_subscription starts from the active sub's end_date).
+    if settings.subscription_options and event.from_user:
+        try:
+            sub = await subscription_dal.get_active_subscription_by_user_id(session, event.from_user.id)
+            if sub and sub.end_date and sub.end_date > datetime.now(timezone.utc):
+                text_content += "\n\n" + get_text("renewal_adds_to_current_term",
+                                                   end_date=sub.end_date.strftime("%d.%m.%Y"))
+        except Exception:
+            logging.exception("Failed to load active subscription for renewal hint")
 
     reply_markup = (
         get_subscription_options_keyboard(settings.subscription_options, currency_symbol_val, current_lang, i18n)
