@@ -195,7 +195,8 @@ class NotificationService:
     async def notify_payment_received(self, user_id: int, amount: float, currency: str,
                                     months: int, payment_provider: str, 
                                     username: Optional[str] = None,
-                                    payment_number: Optional[int] = None):
+                                    payment_number: Optional[int] = None,
+                                    autopay: Optional[str] = None):
         """Send notification about successful payment
         
         Args:
@@ -231,6 +232,9 @@ class NotificationService:
         payment_number_text = ""
         if payment_number is not None:
             payment_number_text = f"🔢 Платёж №: <b>{payment_number}</b>\n"
+        if autopay:  # Platega subscription charge: "new" = first charge (just subscribed), "renewal" = scheduled charge
+            payment_number_text += "🔄 Автопродление: <b>{}</b>\n".format(
+                "подключено" if autopay == "new" else "очередное списание")
         
         message = _(
             "log_payment_received",

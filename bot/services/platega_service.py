@@ -221,9 +221,10 @@ class PlategaService:
         if not sub:
             logging.error(f"Platega autopay: charge {transaction_id} for unknown subscription {sub_id}")
             return None
+        first_charge = sub.status == "pending"
         sub.status = "active"
         sub.next_charge_at = self._parse_dt(payload.get("nextChargeAt")) or sub.next_charge_at
-        return await payment_dal.create_payment_record(session, {
+        payment = await payment_dal.create_payment_record(session, {
             "user_id": sub.user_id,
             "amount": float(payload.get("amount") or sub.amount),
             "currency": payload.get("currency") or self.default_currency,
@@ -233,6 +234,8 @@ class PlategaService:
             "provider": "platega",
             "provider_payment_id": transaction_id,
         })
+        payment.autopay_kind = "new" if first_charge else "renewal"  # for the admin notification only
+        return payment
 
     async def _notify(self, user_id: int, key: str, markup=None, **kw) -> None:
         try:
@@ -544,6 +547,7 @@ class PlategaService:
                     payment_provider="platega",
                     username=db_user.username if db_user else None,
                     payment_number=payment_count,
+                    autopay=getattr(payment, "autopay_kind", None),
                 )
             except Exception as e:
                 logging.error(f"Platega notification: failed to notify admins: {e}")
