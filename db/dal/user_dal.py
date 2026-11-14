@@ -69,9 +69,9 @@ async def ensure_referral_code(session: AsyncSession, user: User) -> str:
 
 
 async def get_user_by_id(session: AsyncSession, user_id: int) -> Optional[User]:
-    stmt = select(User).where(User.user_id == user_id)
-    result = await session.execute(stmt)
-    return result.scalar_one_or_none()
+    # session.get reuses the instance already loaded in this session (no extra SELECT);
+    # middlewares call this several times per update.
+    return await session.get(User, user_id)
 
 
 async def get_user_by_username(session: AsyncSession, username: str) -> Optional[User]:
