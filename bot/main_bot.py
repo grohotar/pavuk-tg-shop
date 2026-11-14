@@ -280,13 +280,17 @@ async def run_bot(settings_param: Settings):
 
     # Local sandbox: polling, only ADMIN_IDS are served
     if not tg_webhook_base and os.getenv("BOT_POLLING") == "1":
-        admins = set(settings_param.ADMIN_IDS)
+        # Sandbox only: admins plus extra test accounts (SANDBOX_TESTER_IDS, comma-separated).
+        admins = set(settings_param.ADMIN_IDS) | {
+            int(x) for x in os.getenv("SANDBOX_TESTER_IDS", "").split(",") if x.strip()}
 
         @dp.update.outer_middleware()
         async def _admins_only(handler, event, data):
             u = data.get("event_from_user")
             if u and u.id in admins:
                 return await handler(event, data)
+            if u:
+                logging.info(f"SANDBOX: ignored update from {u.id} @{u.username}")
 
         logging.info("Starting bot in POLLING mode (sandbox, admins only)...")
         await dp.start_polling(bot)

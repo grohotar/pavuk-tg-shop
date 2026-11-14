@@ -7,6 +7,7 @@ Your own ADMIN_IDS[0] gets an active subscription, the rest are fake users
 """
 import asyncio
 import json
+import os
 import random
 import secrets
 import sys
@@ -48,7 +49,8 @@ async def main(n_users=60):
     await database_setup.init_db(s, factory)
 
     me = s.ADMIN_IDS[0]
-    tg_ids = [me] + [9000000001 + i for i in range(n_users)]
+    testers = [int(x) for x in os.getenv("SANDBOX_TESTER_IDS", "").split(",") if x.strip()]
+    tg_ids = [me] + testers + [9000000001 + i for i in range(n_users)]
     panel = {"users": [], "devices": {}}
     async with factory() as db:
         camps = [AdCampaign(source=src, start_param=p, cost=c)
@@ -64,16 +66,16 @@ async def main(n_users=60):
             pid = i + 1
             reg = NOW - timedelta(days=random.randint(1, 200))
             # status mix: active / expiring soon / expired / disabled / never paid
-            kind = "active" if tg == me else random.choices(
+            kind = "active" if tg == me else "expired" if tg in testers else random.choices(
                 ["active", "soon", "expired", "disabled", "none"], [50, 10, 20, 5, 15])[0]
             end = {"active": NOW + timedelta(days=random.randint(10, 300)),
                    "soon": NOW + timedelta(days=random.randint(0, 3), hours=5),
-                   "expired": NOW - timedelta(days=random.randint(1, 60)),
+                   "expired": NOW - timedelta(days=5 if tg in testers else random.randint(1, 60)),
                    "disabled": NOW + timedelta(days=20),
                    "none": NOW - timedelta(days=1)}[kind]
             pu = {"id": pid, "uuid": str(uuid.uuid4()), "shortUuid": secrets.token_urlsafe(12)[:16],
                   "username": f"tg_{tg}", "telegramId": tg, "email": None, "description": None, "tag": None,
-                  "status": "DISABLED" if kind == "disabled" else "ACTIVE", "expireAt": iso(end),
+                  "status": {"disabled": "DISABLED", "expired": "EXPIRED"}.get(kind, "ACTIVE"), "expireAt": iso(end),
                   "trafficLimitBytes": 0, "trafficLimitStrategy": "NO_RESET", "hwidDeviceLimit": 0,
                   "activeInternalSquads": [], "createdAt": iso(reg),
                   "userTraffic": {"usedTrafficBytes": random.randint(0, 400) * GB,
@@ -86,10 +88,10 @@ async def main(n_users=60):
                 for p, m, ua in random.sample(PLATFORMS, random.randint(0, 3))]
 
             u = User(user_id=tg, username=None,
-                     first_name="Я (админ)" if tg == me else random.choice(NAMES),
+                     first_name="Я (админ)" if tg == me else "Я (тестер)" if tg in testers else random.choice(NAMES),
                      language_code="ru", registration_date=reg, panel_user_uuid=pu["uuid"],
                      panel_user_id=pid, referral_code=secrets.token_hex(4),
-                     referred_by_id=random.choice(users).user_id if users and random.random() < 0.2 else None,
+                     referred_by_id=random.choice(users).user_id if users and tg not in testers and random.random() < 0.2 else None,
                      source=random.choice([None, None, "ad_tg1", "ad_blog"]))
             users.append(u)
             db.add(u)

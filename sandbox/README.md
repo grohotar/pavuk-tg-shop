@@ -11,7 +11,7 @@
 
 ## Где что работает
 
-- **Бот** — на Mac, polling, отвечает только `ADMIN_IDS`. Тестовый бот @ppntestbot, токен в `.env`.
+- **Бот** — на Mac, polling, отвечает только `ADMIN_IDS` и `SANDBOX_TESTER_IDS` (тестовые аккаунты без админки; `seed` даёт им подписку, истёкшую 5 дней назад). Чужие ID пишутся в лог: `SANDBOX: ignored update from …`. Тестовый бот @ppntestbot, токен в `.env`.
 - **Мини-апп** — `https://ppn.na4u.ru` (netangels, контейнер c61358). Под Node 18.20.8, как в проде: хостинг даёт только 18.0.0, поэтому `hello.js` перезапускает приложение под `~/.nvm/versions/node/v18.20.8`. В сборке sharp для linux-x64 (сверен с lockfile).
 - **Фейковая панель** — `https://ppn-panel.na4u.ru`, без ключа отвечает 401. Ключ — `PANEL_API_KEY` в `.env`. Просмотр мини-аппа в браузере: `https://ppn-panel.na4u.ru/frame?key=<PANEL_API_KEY>`.
 - **База бота** — локальный Postgres 17 на Mac.
