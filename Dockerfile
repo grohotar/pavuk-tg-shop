@@ -2,10 +2,11 @@ FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
-COPY requirements.txt .
+# Exact versions running in prod (pip freeze); requirements.txt leaves some unpinned.
+COPY requirements.lock .
 
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements.lock
 
 FROM python:3.11-slim
 
