@@ -18,6 +18,7 @@ from bot.services.panel_api_service import PanelApiService
 from bot.middlewares.i18n import JsonI18n
 from db.dal import subscription_dal, user_billing_dal, platega_subscription_dal
 from bot.services.platega_service import PlategaService
+from bot.services.offers import active_offer, offer_months, price_for
 from db.models import Subscription
 
 router = Router(name="user_subscription_core_router")
@@ -42,6 +43,13 @@ async def display_subscription_options(event: Union[types.Message, types.Callbac
 
     currency_symbol_val = settings.DEFAULT_CURRENCY_SYMBOL
     text_content = get_text("select_subscription_period") if settings.subscription_options else get_text("no_subscription_options_available")
+    # Personal offer (e.g. win-back -50%): discounted prices on its plans and a line with the deadline
+    offer = await active_offer(session, event.from_user.id) if event.from_user else None
+    prices = {m: await price_for(session, settings, event.from_user.id, m) for m in settings.subscription_options} \
+        if event.from_user else settings.subscription_options
+    if offer and settings.subscription_options:
+        text_content += "\n\n" + get_text("personal_offer_line", pct=offer.discount_pct,
+                                           expires=offer.expires_at.strftime("%d.%m.%Y"))
     # Renewal adds to the current term (activate_subscription starts from the active sub's end_date).
     if settings.subscription_options and event.from_user:
         try:
@@ -53,7 +61,9 @@ async def display_subscription_options(event: Union[types.Message, types.Callbac
             logging.exception("Failed to load active subscription for renewal hint")
 
     reply_markup = (
-        get_subscription_options_keyboard(settings.subscription_options, currency_symbol_val, current_lang, i18n)
+        get_subscription_options_keyboard(prices, currency_symbol_val, current_lang, i18n,
+                                          offer_pct=offer.discount_pct if offer else 0,
+                                          offer_months=offer_months(offer) if offer else ())
         if settings.subscription_options
         else get_back_to_main_menu_markup(current_lang, i18n)
     )

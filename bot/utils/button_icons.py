@@ -7,6 +7,7 @@ that text gets the icon, wherever it is built. Unknown texts are left alone.
 from aiogram.client.session.middlewares.base import BaseRequestMiddleware
 
 ICONS = {  # locale key -> custom_emoji_id
+    "winback_buy_button": "5460847958184475262",  # buy (pink)
     "menu_subscribe_inline": "5460847958184475262",        # buy, pink: separate non-adaptive set pipun_accent_by_ppntestbot
     "menu_my_subscription_inline": "5458836753848771681",  # subscription (key)
     "menu_referral_inline": "5460861165208907427",         # referral (gift)

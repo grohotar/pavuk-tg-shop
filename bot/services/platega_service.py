@@ -20,6 +20,7 @@ from bot.keyboards.inline.user_keyboards import get_connect_and_main_keyboard
 from bot.services.notification_service import NotificationService
 from db.dal import payment_dal, user_dal, platega_subscription_dal
 from bot.keyboards.inline.user_keyboards import get_subscribe_only_markup
+from bot.services.offers import mark_offer_used
 from bot.utils.text_sanitizer import sanitize_display_name, username_for_display
 
 
@@ -430,6 +431,9 @@ class PlategaService:
                     current_payment_db_id=payment.payment_id,
                     skip_if_active_before_payment=False,
                 )
+
+                await mark_offer_used(session, self.settings, payment.user_id, months,
+                                      float(payment.amount), payment.payment_id)
 
                 await session.commit()
             except Exception as e:

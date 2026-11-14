@@ -154,6 +154,12 @@ async def on_startup_configured(dispatcher: Dispatcher):
     except Exception as e:
         logging.error(f"STARTUP: Failed to initialize message queue manager: {e}", exc_info=True)
 
+    if settings.UNPAID_REMINDER_ENABLED:
+        from bot.services.unpaid_reminder import run as unpaid_reminder_run
+        dispatcher["unpaid_reminder_task"] = asyncio.create_task(
+            unpaid_reminder_run(bot, settings, i18n_instance, async_session_factory))
+        logging.info("STARTUP: unpaid reminder enabled")
+
     # Automatic sync on startup
     try:
         logging.info("STARTUP: Running automatic panel sync...")

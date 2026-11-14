@@ -1,4 +1,5 @@
 import logging
+import re
 from datetime import datetime
 from aiogram import Router, F, types
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
@@ -20,8 +21,32 @@ from bot.services.crypto_pay_service import CryptoPayService
 from bot.services.stars_service import StarsService
 from bot.middlewares.i18n import JsonI18n
 from db.dal import payment_dal, user_billing_dal, platega_subscription_dal
+from bot.services.offers import price_for
 
 router = Router(name="user_subscription_payments_router")
+
+# Never trust the price inside callback data (a modified client can send any number): replace it with the
+# server-side price for this user (personal offer included). Autopay always uses the regular price.
+_PRICE_CB = re.compile(r"^(pay_(?:crypto|fk|platega|platega_card|platega_sub|yk|yk_new|yk_saved_list|yk_use_saved)):(\d+):([^:]+)(.*)$")
+
+
+@router.callback_query.outer_middleware()
+async def _server_side_price(handler, event: types.CallbackQuery, data: dict):
+    m = _PRICE_CB.match(event.data or "")
+    if m:
+        prefix, months = m.group(1), int(m.group(2))
+        settings: Settings = data["settings"]
+        if prefix == "pay_platega_sub":
+            price = settings.subscription_options.get(months)
+        else:
+            price = await price_for(data["session"], settings, event.from_user.id, months)
+        if price is None:
+            await event.answer()
+            return
+        new = f"{prefix}:{months}:{float(price)}{m.group(4)}"
+        if new != event.data:
+            event = event.model_copy(update={"data": new})
+    return await handler(event, data)
 
 
 def _parse_months_and_price(payload: str) -> Optional[Tuple[int, float]]:
@@ -328,7 +353,7 @@ async def select_subscription_period_callback_handler(callback: types.CallbackQu
             pass
         return
 
-    price_rub = settings.subscription_options.get(months)
+    price_rub = await price_for(session, settings, callback.from_user.id, months)
     if price_rub is None:
         logging.error(
             f"Price not found for {months} months subscription period in settings.subscription_options."

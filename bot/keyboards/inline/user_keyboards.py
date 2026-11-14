@@ -66,7 +66,8 @@ def get_trial_confirmation_keyboard(lang: str,
 
 def get_subscription_options_keyboard(subscription_options: Dict[
     int, Optional[int]], currency_symbol_val: str, lang: str,
-                                      i18n_instance) -> InlineKeyboardMarkup:
+                                      i18n_instance, offer_pct: int = 0,
+                                      offer_months=()) -> InlineKeyboardMarkup:
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     # Display only: DEFAULT_CURRENCY_SYMBOL is also sent to payment providers as a currency code.
     if currency_symbol_val == "RUB":
@@ -88,6 +89,8 @@ def get_subscription_options_keyboard(subscription_options: Dict[
                     button_text = f"12 месяцев — {price:.0f}\u202f{currency_symbol_val} (−25\u202f%)"
                 else:
                     button_text = f"{months} мес. — {price:.0f}\u202f{currency_symbol_val}"
+                if months in offer_months:  # personal offer: price already discounted by the caller
+                    button_text = button_text.split(" — ")[0] + f" — {price:.0f}\u202f{currency_symbol_val} · −{offer_pct}\u202f%"
                 
                 builder.button(text=button_text,
                                callback_data=f"subscribe_period:{months}")

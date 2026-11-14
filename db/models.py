@@ -282,3 +282,28 @@ class PlategaSubscription(Base):
     next_charge_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
+
+
+class PersonalOffer(Base):
+    """Personal discount (e.g. win-back campaign): one purchase of listed plans at -discount_pct until expires_at."""
+    __tablename__ = "personal_offers"
+    __table_args__ = (UniqueConstraint("user_id", "campaign", name="uq_personal_offer_user_campaign"),)
+
+    offer_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(BigInteger, ForeignKey("users.user_id"), nullable=False, index=True)
+    campaign = Column(String, nullable=False)
+    discount_pct = Column(Integer, nullable=False)
+    months = Column(String, nullable=False)  # comma-separated plan lengths, e.g. "1,3"
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    used_payment_id = Column(Integer, nullable=True)
+    send_status = Column(String, nullable=True)  # sent / blocked / error
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class SentNotice(Base):
+    """One-off notices already sent to a user (e.g. "unpaid_24h"), so they are never repeated."""
+    __tablename__ = "sent_notices"
+
+    user_id = Column(BigInteger, ForeignKey("users.user_id"), primary_key=True)
+    kind = Column(String, primary_key=True)
+    sent_at = Column(DateTime(timezone=True), server_default=func.now())

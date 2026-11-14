@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     SUPPORT_LINK: Optional[str] = Field(default=None)
     SERVER_STATUS_URL: Optional[str] = Field(default=None)
     MENU_PROMO_BUTTON_ENABLED: bool = Field(default=False)
+    UNPAID_REMINDER_ENABLED: bool = Field(default=False)
     TERMS_OF_SERVICE_URL: Optional[str] = Field(default=None)
     REQUIRED_CHANNEL_ID: Optional[int] = Field(
         default=None,
