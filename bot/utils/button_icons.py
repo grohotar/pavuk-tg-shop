@@ -18,6 +18,7 @@ ICONS = {  # locale key -> custom_emoji_id
     "connect_button": "5458530200558026384",               # connect
     "renew_subscription_button": "5458690639061366368",    # extend
     "renew_short_button": "5458690639061366368",
+    "week_upsell_other_button": "5458690639061366368",  # extend
     "pay_with_platega_sub_button": "5458690639061366368",  # extend
     "autopay_subscribe_button": "5458690639061366368",
     "autopay_disable_button": "5458694491647028850",  # cancel

@@ -4,7 +4,9 @@ import hmac
 import hashlib
 from aiohttp import web
 from aiogram import Bot
-from aiogram.types import InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from sqlalchemy import select
+from db.models import Payment
 from sqlalchemy.orm import sessionmaker
 from typing import Optional
 from config.settings import Settings
@@ -39,15 +41,36 @@ class PanelWebhookService:
         lang: str,
         message_key: str,
         reply_markup: InlineKeyboardMarkup | None = None,
+        suffix: str = "",
         **kwargs,
     ):
         _ = lambda k, **kw: self.i18n.gettext(lang, k, **kw)
         try:
             await self.bot.send_message(
-                user_id, _(message_key, **kwargs), reply_markup=reply_markup
+                user_id, _(message_key, **kwargs) + suffix, reply_markup=reply_markup
             )
         except Exception as e:
             logging.error(f"Failed to send notification to {user_id}: {e}")
+
+    async def _week_upsell(self, user_id: int, lang: str):
+        """If the user's last purchase was a week: suggest a month instead (line + direct button)."""
+        week, month = self.settings.subscription_options.get(0), self.settings.subscription_options.get(1)
+        if not week or not month:
+            return None
+        async with self.async_session_factory() as session:
+            last = (await session.execute(
+                select(Payment.subscription_duration_months)
+                .where(Payment.user_id == user_id, Payment.status == "succeeded")
+                .order_by(Payment.created_at.desc()).limit(1))).scalar()
+        times = int(week * 30 / 7 / month)
+        if last != 0 or times < 2:
+            return None
+        _ = lambda k, **kw: self.i18n.gettext(lang, k, **kw)
+        markup = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=_("week_upsell_month_button", price=f"{month:.0f}"), callback_data="subscribe_period:1")],
+            [InlineKeyboardButton(text=_("week_upsell_other_button"), callback_data="main_action:subscribe")],
+        ])
+        return markup, "\n\n" + _("week_upsell_line", price=f"{month:.0f}", times=times)
 
     async def _handle_expired_subscription(self, session, user_id: int, user_payload: dict, 
                                          lang: str, markup, first_name: str) -> bool:
@@ -205,6 +228,10 @@ class PanelWebhookService:
             first_name = db_user.first_name or f"User {user_id}" if db_user else f"User {user_id}"
 
         markup = get_subscribe_only_markup(lang, self.i18n)
+        suffix = ""
+        upsell = await self._week_upsell(user_id, lang)
+        if upsell:
+            markup, suffix = upsell
 
         if event_name in EVENT_MAP:
             days_left, msg_key = EVENT_MAP[event_name]
@@ -258,6 +285,7 @@ class PanelWebhookService:
                     lang,
                     msg_key,
                     reply_markup=markup,
+                    suffix=suffix,
                     user_name=first_name,
                     end_date=_ddmmyyyy(user_payload.get("expireAt")),
                 )
@@ -273,6 +301,7 @@ class PanelWebhookService:
                     lang,
                     "subscription_expired_notification",
                     reply_markup=markup,
+                    suffix=suffix,
                     user_name=first_name,
                     end_date=_ddmmyyyy(user_payload.get("expireAt")),
                 )
@@ -282,6 +311,7 @@ class PanelWebhookService:
                 lang,
                 "subscription_expired_yesterday_notification",
                 reply_markup=markup,
+                suffix=suffix,
                 user_name=first_name,
                 end_date=_ddmmyyyy(user_payload.get("expireAt")),
             )
