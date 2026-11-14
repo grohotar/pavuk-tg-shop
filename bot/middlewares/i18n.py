@@ -15,6 +15,21 @@ from config.settings import Settings
 _ISO_DATE = re.compile(r"^(\d{4})-(\d{2})-(\d{2})(?=$| \d{2}:\d{2}$)")
 
 
+# Russian typography: no hanging short words, "67 дней" / "140 ГБ" and " —" stay on one line.
+_SHORT_WORDS = re.compile(
+    r"(?<![\w-])(в|во|к|ко|с|со|у|о|об|и|а|но|да|по|до|на|за|из|от|не|ни|для|без|при|про|под|над|что|как|ещё|уже|или)"
+    r" (?=\S)", re.IGNORECASE)
+_NUM_UNIT = re.compile(r"(\d) (?=(?:дн|день|дня|дней|ГБ|мес|нед|₽|секунд|минут|час))")
+
+
+def _nbsp(text: str) -> str:
+    if not isinstance(text, str):
+        return text
+    text = _SHORT_WORDS.sub("\\1\u00a0", text)
+    text = _NUM_UNIT.sub("\\1\u00a0", text)
+    return text.replace(" —", "\u00a0—").replace(" –", "\u00a0–")
+
+
 class JsonI18n:
 
     def __init__(self, path: str, default: str = "en", domain: str = "bot"):
@@ -49,6 +64,9 @@ class JsonI18n:
                         exc_info=True)
 
     def gettext(self, lang_code: Optional[str], key: str, **kwargs) -> str:
+        return _nbsp(self._gettext(lang_code, key, **kwargs))
+
+    def _gettext(self, lang_code: Optional[str], key: str, **kwargs) -> str:
         lang_code = self.default_lang  # Russian only: ignore per-user language
         # Show dates as DD.MM.YYYY in every text: callers pass "YYYY-MM-DD" (optionally " HH:MM").
         kwargs = {k: _ISO_DATE.sub(r"\3.\2.\1", v) if isinstance(v, str) else v

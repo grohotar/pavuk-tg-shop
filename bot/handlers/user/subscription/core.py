@@ -192,7 +192,7 @@ async def my_subscription_command_handler(
         prepend_rows = []
 
         # 1) Connect (mini app, else config link) and Renew.
-        #    Active: [Connect | Renew]; 7 days or less: Renew first; not active: Renew only.
+        #    Active: Connect, Renew (one per row); 7 days or less: Renew first; not active: Renew only.
         connect_btn = None
         if settings.SUBSCRIPTION_MINI_APP_URL:
             connect_btn = InlineKeyboardButton(
@@ -212,7 +212,9 @@ async def my_subscription_command_handler(
         else:
             renew_btn = InlineKeyboardButton(text=get_text("renew_short_button"),
                                              callback_data="main_action:subscribe")
-            prepend_rows.append([connect_btn, renew_btn] if connect_btn else [renew_btn])
+            if connect_btn:
+                prepend_rows.append([connect_btn])
+            prepend_rows.append([renew_btn])
 
         if settings.MY_DEVICES_SECTION_ENABLED:
             max_devices_value = active.get("max_devices")
