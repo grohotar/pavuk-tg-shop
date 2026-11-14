@@ -81,9 +81,7 @@ async def referral_command_handler(event: Union[types.Message,
         return f"{n} месяцев"
 
     bonus_info_parts = []
-    # Months first, 1 week (key 0) last.
-    for months_period_key in sorted(settings.subscription_options or {},
-                                    key=lambda m: (m == 0, m)):
+    for months_period_key in sorted(settings.subscription_options or {}):
         inv_bonus = settings.referral_bonus_inviter.get(months_period_key)
         ref_bonus = settings.referral_bonus_referee.get(months_period_key)
         if not inv_bonus and not ref_bonus:
