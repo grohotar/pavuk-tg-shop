@@ -83,7 +83,7 @@
   "trial_activated_details_message": "<b>Пробный доступ активирован</b>\nНа {days} дн., до <b>{end_date}</b>.\n\nНажмите «Подключиться» — откроется инструкция для вашего устройства.\n\nСсылка на подписку (нажмите, чтобы скопировать):\n<code>{config_link}</code>",
   "yes_button": "Да",
   "no_button": "Нет",
-  "referral_program_info_new": "<b>Пригласить друга</b>\nЗа каждого друга, который оплатит подписку, вы получите <b>+{inviter_days} дней бесплатно</b>. Друг получит <b>+{friend_days} дней</b> к своей первой подписке.{week_note}\n\n<b>Ваша ссылка</b> (нажмите, чтобы скопировать)\n<code>{referral_link}</code>\n\n<b>Статистика</b>\nПриглашено: <b>{invited_count}</b> · Оплатили: <b>{purchased_count}</b>",
+  "referral_program_info_new": "<b>Пригласить друга</b>\nЗа каждого друга, который оплатит подписку, вы получите <b>+{inviter_days} дней бесплатно</b>. Друг получит <b>+{friend_days} дней</b> к своей первой подписке.{week_note}\n\n<b>Ссылка-приглашение для друга</b> (нажмите, чтобы скопировать)\n<code>{referral_link}</code>\n\n<b>Статистика</b>\nПриглашено: <b>{invited_count}</b> · Оплатили: <b>{purchased_count}</b>",
   "referral_share_message_button": "Сообщение для друга",
   "referral_friend_message": "Рекомендую Pipun VPN: быстрый, работает на всех устройствах.\nПо этой ссылке — +{friend_days} дней к первой подписке:\n{referral_link}",
   "friend_placeholder": "друг",
