@@ -73,31 +73,28 @@ async def referral_command_handler(event: Union[types.Message,
             await event.answer()
         return
 
+    def _months(n: int) -> str:
+        if n % 10 == 1 and n % 100 != 11:
+            return f"{n} месяц"
+        if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14:
+            return f"{n} месяца"
+        return f"{n} месяцев"
+
     bonus_info_parts = []
-    if settings.subscription_options:
-
-        for months_period_key, _price in sorted(
-                settings.subscription_options.items()):
-
-            inv_bonus = settings.referral_bonus_inviter.get(months_period_key)
-            ref_bonus = settings.referral_bonus_referee.get(months_period_key)
-            if inv_bonus is not None or ref_bonus is not None:
-                # Use special key for 1 week (0 months)
-                if months_period_key == 0:
-                    bonus_info_parts.append(
-                        _("referral_bonus_per_period_1_week",
-                          inviter_bonus_days=inv_bonus
-                          if inv_bonus is not None else _("no_bonus_placeholder"),
-                          referee_bonus_days=ref_bonus
-                          if ref_bonus is not None else _("no_bonus_placeholder")))
-                else:
-                    bonus_info_parts.append(
-                        _("referral_bonus_per_period",
-                          months=months_period_key,
-                          inviter_bonus_days=inv_bonus
-                          if inv_bonus is not None else _("no_bonus_placeholder"),
-                          referee_bonus_days=ref_bonus
-                          if ref_bonus is not None else _("no_bonus_placeholder")))
+    # Months first, 1 week (key 0) last.
+    for months_period_key in sorted(settings.subscription_options or {},
+                                    key=lambda m: (m == 0, m)):
+        inv_bonus = settings.referral_bonus_inviter.get(months_period_key)
+        ref_bonus = settings.referral_bonus_referee.get(months_period_key)
+        if not inv_bonus and not ref_bonus:
+            continue
+        period = "1 неделя" if months_period_key == 0 else _months(months_period_key)
+        parts = []
+        if inv_bonus:
+            parts.append(_("referral_bonus_you", days=inv_bonus))
+        if ref_bonus:
+            parts.append(_("referral_bonus_friend", days=ref_bonus))
+        bonus_info_parts.append(f"{period} — {', '.join(parts)}")
 
     bonus_details_str = "\n".join(bonus_info_parts) if bonus_info_parts else _(
         "referral_no_bonuses_configured")
