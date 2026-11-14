@@ -408,6 +408,7 @@ class PlategaService:
 
             activation = None
             referral_bonus = None
+            used_offer = None
             try:
                 await payment_dal.update_provider_payment_and_status(
                     session=session,
@@ -435,8 +436,8 @@ class PlategaService:
                     skip_if_active_before_payment=False,
                 )
 
-                await mark_offer_used(session, self.settings, payment.user_id, months,
-                                      float(payment.amount), payment.payment_id)
+                used_offer = await mark_offer_used(session, self.settings, payment.user_id, months,
+                                                   float(payment.amount), payment.payment_id)
 
                 await session.commit()
             except Exception as e:
@@ -548,6 +549,9 @@ class PlategaService:
                     username=db_user.username if db_user else None,
                     payment_number=payment_count,
                     autopay=getattr(payment, "autopay_kind", None),
+                    offer=(f"−{used_offer.discount_pct}\u202f%"
+                           + (" (возврат ушедших)" if used_offer.campaign.startswith("winback") else f" ({used_offer.campaign})"))
+                    if used_offer else None,
                 )
             except Exception as e:
                 logging.error(f"Platega notification: failed to notify admins: {e}")

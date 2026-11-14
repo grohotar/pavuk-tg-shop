@@ -196,7 +196,8 @@ class NotificationService:
                                     months: int, payment_provider: str, 
                                     username: Optional[str] = None,
                                     payment_number: Optional[int] = None,
-                                    autopay: Optional[str] = None):
+                                    autopay: Optional[str] = None,
+                                    offer: Optional[str] = None):
         """Send notification about successful payment
         
         Args:
@@ -235,6 +236,8 @@ class NotificationService:
         if autopay:  # Platega subscription charge: "new" = first charge (just subscribed), "renewal" = scheduled charge
             payment_number_text += "🔄 Автопродление: <b>{}</b>\n".format(
                 "подключено" if autopay == "new" else "очередное списание")
+        if offer:  # paid with a personal discount, e.g. "−50 % (возврат ушедших)"
+            payment_number_text += f"🎁 Скидка: <b>{offer}</b>\n"
         
         message = _(
             "log_payment_received",

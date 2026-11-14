@@ -40,9 +40,11 @@ async def price_for(session: AsyncSession, settings: Settings, user_id: int, mon
 
 
 async def mark_offer_used(session: AsyncSession, settings: Settings, user_id: int, months: int,
-                          amount: float, payment_id: int) -> None:
-    """Called after a successful payment: a discounted purchase consumes the offer."""
+                          amount: float, payment_id: int) -> Optional[PersonalOffer]:
+    """Called after a successful payment: a discounted purchase consumes the offer (returned)."""
     offer = await active_offer(session, user_id)
     base = settings.subscription_options.get(months)
     if offer and base and months in offer_months(offer) and amount < base:
         offer.used_payment_id = payment_id
+        return offer
+    return None
