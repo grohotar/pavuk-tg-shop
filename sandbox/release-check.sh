@@ -12,7 +12,8 @@ echo "== prod tag: $BASE   HEAD: $(git rev-parse --short HEAD)"
 echo "== commits going to prod:"; git log --oneline "$BASE"..HEAD
 echo "== files going to prod (sandbox/ excluded, it is in .dockerignore):"
 git diff --stat "$BASE"..HEAD -- . ':!sandbox'
-LEAK=$(git diff "$BASE"..HEAD -- . ':!sandbox' | grep -E '^\+' | grep -iE 'na4u|ppntestbot|sandbox-local|127\.0\.0\.1:3999|sub\.sandbox\.invalid' || true)
+LEAK=$(git diff "$BASE"..HEAD -- . ':!sandbox' | grep -E '^\+' | grep -iE 'na4u|ppntestbot|sandbox-local|127\.0\.0\.1:3999|sub\.sandbox\.invalid' \
+  | grep -vE 'pipun_(icons|accent)_by_ppntestbot' || true)  # emoji sets used in prod, created by the test bot
 [ -z "$LEAK" ] || { echo "STOP: sandbox-only values outside sandbox/:"; echo "$LEAK"; exit 1; }
 grep -qx 'sandbox/' .dockerignore || { echo "STOP: sandbox/ missing from .dockerignore"; exit 1; }
 cat <<'TXT'
