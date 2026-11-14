@@ -138,9 +138,10 @@ async def my_subscription_command_handler(
 
     text = get_text(
         "my_subscription_details",
-        end_date=end_date.strftime("%Y-%m-%d") if end_date else "N/A",
+        end_date=end_date.strftime("%d.%m.%Y") if end_date else "N/A",
         days_left=max(0, days_left),
-        status=active.get("status_from_panel", get_text("status_active")).capitalize(),
+        status={"ACTIVE": "Активна", "EXPIRED": "Истекла", "DISABLED": "Отключена", "LIMITED": "Лимит трафика"}.get(
+            active.get("status_from_panel", "ACTIVE").upper(), active.get("status_from_panel", "").capitalize()),
         status_icon="🟢" if active.get("status_from_panel", "active").lower() == "active" else "🔴",
         config_link=active.get("config_link") or get_text("config_link_not_available"),
         traffic_limit=(f"{active['traffic_limit_bytes'] / 2**30:.2f} GB" if active.get("traffic_limit_bytes") else get_text("traffic_unlimited")),
