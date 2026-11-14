@@ -136,18 +136,43 @@ async def my_subscription_command_handler(
                     get_text("subscription_tribute_notice_with_link", link=link) if link else get_text("subscription_tribute_notice")
                 )
 
+    def _days(n: int) -> str:
+        if n % 10 == 1 and n % 100 != 11:
+            return f"{n} день"
+        if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14:
+            return f"{n} дня"
+        return f"{n} дней"
+
+    def _gb(b: int) -> str:
+        g = b / 2**30
+        return f"{g:.0f} ГБ" if g >= 10 else f"{g:.1f}".rstrip("0").rstrip(".").replace(".", ",") + " ГБ"
+
+    panel_status = (active.get("status_from_panel") or "ACTIVE").upper()
+    is_active = panel_status == "ACTIVE" and days_left >= 0
+    end_str = end_date.strftime("%d.%m.%Y") if end_date else "—"
+    if is_active:
+        status_line = get_text("subscription_status_active", end_date=end_str,
+                               days_left=_days(days_left)) if days_left > 0 else \
+            get_text("subscription_status_last_day", end_date=end_str)
+        if days_left <= 7:
+            status_line += "\n" + get_text("subscription_renew_soon_hint")
+    elif panel_status == "DISABLED":
+        status_line = get_text("subscription_status_disabled")
+    elif panel_status == "LIMITED":
+        status_line = get_text("subscription_status_limited")
+    else:
+        status_line = get_text("subscription_status_expired", end_date=end_str)
+
+    used = active.get("traffic_used_bytes") or 0
+    limit = active.get("traffic_limit_bytes")
+    traffic_line = get_text("subscription_traffic_limited", used=_gb(used), limit=_gb(limit)) if limit else \
+        get_text("subscription_traffic_unlimited", used=_gb(used))
+
     text = get_text(
         "my_subscription_details",
-        end_date=end_date.strftime("%d.%m.%Y") if end_date else "N/A",
-        days_left=max(0, days_left),
-        status={"ACTIVE": "Активна", "EXPIRED": "Истекла", "DISABLED": "Отключена", "LIMITED": "Лимит трафика"}.get(
-            active.get("status_from_panel", "ACTIVE").upper(), active.get("status_from_panel", "").capitalize()),
-        status_icon="🟢" if active.get("status_from_panel", "active").lower() == "active" else "🔴",
+        status_line=status_line,
+        traffic_line=traffic_line,
         config_link=active.get("config_link") or get_text("config_link_not_available"),
-        traffic_limit=(f"{active['traffic_limit_bytes'] / 2**30:.2f} GB" if active.get("traffic_limit_bytes") else get_text("traffic_unlimited")),
-        traffic_used=(
-            f"{active['traffic_used_bytes'] / 2**30:.2f} GB" if active.get("traffic_used_bytes") is not None else get_text("traffic_na")
-        ),
     )
 
     base_markup = get_back_to_main_menu_markup(current_lang, i18n)
@@ -157,23 +182,28 @@ async def my_subscription_command_handler(
         # Build rows to prepend above the base "back" markup
         prepend_rows = []
 
-        # 1) Mini-app connect button on top if enabled, otherwise fall back to config link URL
+        # 1) Connect (mini app, else config link) and Renew.
+        #    Active: [Connect | Renew]; 7 days or less: Renew first; not active: Renew only.
+        connect_btn = None
         if settings.SUBSCRIPTION_MINI_APP_URL:
-            prepend_rows.append([
-                InlineKeyboardButton(
-                    text=get_text("connect_button"),
-                    web_app=WebAppInfo(url=settings.SUBSCRIPTION_MINI_APP_URL),
-                )
-            ])
+            connect_btn = InlineKeyboardButton(
+                text=get_text("connect_button"),
+                web_app=WebAppInfo(url=settings.SUBSCRIPTION_MINI_APP_URL),
+            )
+        elif (active or {}).get("config_link"):
+            connect_btn = InlineKeyboardButton(text=get_text("connect_button"), url=active["config_link"])
+        if not is_active:
+            prepend_rows.append([InlineKeyboardButton(text=get_text("renew_subscription_button"),
+                                                      callback_data="main_action:subscribe")])
+        elif days_left <= 7:
+            prepend_rows.append([InlineKeyboardButton(text=get_text("renew_subscription_button"),
+                                                      callback_data="main_action:subscribe")])
+            if connect_btn:
+                prepend_rows.append([connect_btn])
         else:
-            cfg_link_val = (active or {}).get("config_link")
-            if cfg_link_val:
-                prepend_rows.append([
-                    InlineKeyboardButton(
-                        text=get_text("connect_button"),
-                        url=cfg_link_val,
-                    )
-                ])
+            renew_btn = InlineKeyboardButton(text=get_text("renew_short_button"),
+                                             callback_data="main_action:subscribe")
+            prepend_rows.append([connect_btn, renew_btn] if connect_btn else [renew_btn])
 
         if settings.MY_DEVICES_SECTION_ENABLED:
             max_devices_value = active.get("max_devices")

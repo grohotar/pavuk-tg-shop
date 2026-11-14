@@ -422,7 +422,7 @@
   "admin_sync_no_telegram_id": "\n⚠️ Записей без telegramId: {count}",
   "admin_sync_not_found_in_db": "\n❌ Не найдено в БД: {count}",
   "admin_payments_pagination_info": "📊 Показано {shown} из {total} платежей (стр. {current_page}/{total_pages})",
-  "my_subscription_details": "🔐 <b>Моя подписка</b>\n\n{status_icon} Статус: <b>{status}</b>\n📅 Действует до: <b>{end_date}</b>\n⏲️ Осталось дней: <b>{days_left}</b>\n\n🔗 Ссылка на подписку:\n<code>{config_link}</code>\n\n📊 Трафик:\nЛимит: <b>{traffic_limit}</b>\nИспользовано: <b>{traffic_used}</b>",
+  "my_subscription_details": "<b>Управление подпиской</b>\n\n{status_line}\n📶 {traffic_line}\n\n🔗 Ссылка на подписку (нажмите, чтобы скопировать):\n<code>{config_link}</code>",
   "autorenew_enable_button": "🔄 Включить автопродление",
   "autorenew_disable_button": "🛑 Отключить автопродление",
   "subscription_autorenew_updated": "Настройки автопродления обновлены.",
@@ -491,5 +491,14 @@
   "admin_platega_all_time_label": "За все время",
   "referral_bonus_you": "вам <b>+{days} дн.</b>",
   "referral_bonus_friend": "другу <b>+{days} дн.</b>",
-  "renew_subscription_button": "Продлить подписку"
+  "renew_subscription_button": "Продлить подписку",
+  "subscription_status_active": "🟢 Активна до <b>{end_date}</b> — ещё <b>{days_left}</b>",
+  "subscription_status_last_day": "🟢 Активна до <b>{end_date}</b> — сегодня последний день",
+  "subscription_renew_soon_hint": "⚠️ Продлите заранее, чтобы не прерывалось соединение.",
+  "subscription_status_expired": "🔴 Подписка закончилась <b>{end_date}</b>",
+  "subscription_status_disabled": "🔴 Подписка отключена",
+  "subscription_status_limited": "🔴 Исчерпан лимит трафика",
+  "subscription_traffic_unlimited": "Использовано <b>{used}</b>, без ограничений",
+  "subscription_traffic_limited": "Использовано <b>{used}</b> из <b>{limit}</b>",
+  "renew_short_button": "Продлить"
 }
