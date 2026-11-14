@@ -77,15 +77,15 @@ def get_subscription_options_keyboard(subscription_options: Dict[
             if price is not None:
                 # Format button text with discounts and emoji
                 if months == 0:
-                    button_text = f"1 нед. — {price:.0f} {currency_symbol_val}"
+                    button_text = f"1 неделя — {price:.0f} {currency_symbol_val}"
                 elif months == 1:
-                    button_text = f"1 мес. — {price:.0f} {currency_symbol_val} 🔥"
+                    button_text = f"1 месяц — {price:.0f} {currency_symbol_val} 🔥"
                 elif months == 3:
-                    button_text = f"3 мес. — {price:.0f} {currency_symbol_val} (-10%)"
+                    button_text = f"3 месяца — {price:.0f} {currency_symbol_val} (-10%)"
                 elif months == 6:
-                    button_text = f"6 мес. — {price:.0f} {currency_symbol_val} (-15%)"
+                    button_text = f"6 месяцев — {price:.0f} {currency_symbol_val} (-15%)"
                 elif months == 12:
-                    button_text = f"12 мес. — {price:.0f} {currency_symbol_val} (-25%)"
+                    button_text = f"12 месяцев — {price:.0f} {currency_symbol_val} (-25%)"
                 else:
                     button_text = f"{months} мес. — {price:.0f} {currency_symbol_val}"
                 
