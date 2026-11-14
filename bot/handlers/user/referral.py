@@ -73,36 +73,15 @@ async def referral_command_handler(event: Union[types.Message,
             await event.answer()
         return
 
-    def _months(n: int) -> str:
-        if n % 10 == 1 and n % 100 != 11:
-            return f"{n} месяц"
-        if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14:
-            return f"{n} месяца"
-        return f"{n} месяцев"
-
-    bonus_info_parts = []
-    for months_period_key in sorted(settings.subscription_options or {}):
-        inv_bonus = settings.referral_bonus_inviter.get(months_period_key)
-        ref_bonus = settings.referral_bonus_referee.get(months_period_key)
-        if not inv_bonus and not ref_bonus:
-            continue
-        period = "1 неделя" if months_period_key == 0 else _months(months_period_key)
-        parts = []
-        if inv_bonus:
-            parts.append(_("referral_bonus_you", days=inv_bonus))
-        if ref_bonus:
-            parts.append(_("referral_bonus_friend", days=ref_bonus))
-        bonus_info_parts.append(f"{period} — {', '.join(parts)}")
-
-    bonus_details_str = "\n".join(bonus_info_parts) if bonus_info_parts else _(
-        "referral_no_bonuses_configured")
-
     # Get referral statistics
     referral_stats = await referral_service.get_referral_stats(session, inviter_user_id)
 
+    week_days = settings.referral_bonus_inviter.get(0)
     text = _("referral_program_info_new",
              referral_link=referral_link,
-             bonus_details=bonus_details_str,
+             inviter_days=settings.referral_bonus_inviter.get(1, 0),
+             friend_days=settings.referral_bonus_referee.get(1, 0),
+             week_note=_("referral_week_note", days=week_days) if week_days else "",
              invited_count=referral_stats["invited_count"],
              purchased_count=referral_stats["purchased_count"])
 
@@ -157,7 +136,8 @@ async def referral_action_handler(callback: types.CallbackQuery, settings: Setti
                 await callback.answer(_("error_generating_referral_link"), show_alert=True)
                 return
             
-            friend_message = _("referral_friend_message", referral_link=referral_link)
+            friend_message = _("referral_friend_message", referral_link=referral_link,
+                               friend_days=settings.referral_bonus_referee.get(1, 0))
             
             await callback.message.answer(
                 friend_message,

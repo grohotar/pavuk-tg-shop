@@ -105,7 +105,8 @@ async def create_referral_result(
             "referral_friend_message",
             default="🚀 Привет! Попробуй этот VPN - быстрый, надёжный и доступный!\n\n"
                    "🎁 По моей ссылке тебе дадут бонусные дни к подписке!\n\n{referral_link}",
-            referral_link=referral_link
+            referral_link=referral_link,
+            friend_days=settings.referral_bonus_referee.get(1, 0),
         )
         
         return InlineQueryResultArticle(

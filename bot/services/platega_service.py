@@ -518,6 +518,11 @@ class PlategaService:
                     text += "\n\n" + _("autopay_next_charge_line", date=sub.next_charge_at.strftime("%d.%m.%Y"),
                                        amount=f"{sub.amount:.0f}")
 
+            # Once in a lifetime: on the user's very first payment, mention the referral bonus
+            inviter_days = self.settings.referral_bonus_inviter.get(1)
+            if inviter_days and await payment_dal.count_user_succeeded_payments(session, payment.user_id) == 1:
+                text += "\n\n" + _("referral_hint_after_first_payment", days=inviter_days)
+
             markup = get_connect_and_main_keyboard(
                 lang,
                 self.i18n,
