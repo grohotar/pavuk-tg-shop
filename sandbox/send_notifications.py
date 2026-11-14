@@ -20,9 +20,15 @@ from bot.services.panel_webhook_service import PanelWebhookService  # noqa: E402
 
 async def main(tg: int):
     s = get_settings()
+    s.SUBSCRIPTION_NOTIFICATIONS_ENABLED = True  # off in the sandbox .env
     factory = database_setup.init_db_connection(s)
     bot = Bot(s.BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
     svc = PanelWebhookService(bot, s, get_i18n_instance(path="locales", default=s.DEFAULT_LANGUAGE), factory, None)
+    sent = []
+    orig = bot.send_message
+    async def counting_send(*a, **kw):
+        sent.append(await orig(*a, **kw))
+    bot.send_message = counting_send
     now = datetime.now(timezone.utc)
     for hours in (-72, -48, -24):
         await svc.handle_event("user.expiration", {"telegramId": tg, "expireAt": (now - timedelta(hours=hours)).isoformat()},
@@ -31,5 +37,6 @@ async def main(tg: int):
     await svc.handle_event("user.expiration", {"telegramId": tg, "expireAt": (now - timedelta(days=1)).isoformat()},
                            {"expiration": 24})
     await bot.session.close()
+    print(f"sent {len(sent)} messages to {tg}")
 
 asyncio.run(main(int(sys.argv[1])))
