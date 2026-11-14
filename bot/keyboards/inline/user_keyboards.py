@@ -34,21 +34,15 @@ def get_main_menu_inline_keyboard(
     promo_button = InlineKeyboardButton(
         text=_(key="menu_apply_promo_button"),
         callback_data="main_action:apply_promo")
-    builder.row(referral_button, promo_button)
+    if settings.MENU_PROMO_BUTTON_ENABLED:
+        builder.row(referral_button, promo_button)
+    else:
+        builder.row(referral_button)
 
-    language_button = InlineKeyboardButton(
-        text=_(key="menu_language_settings_inline"),
-        callback_data="main_action:language")
-    status_button_list = []
     if settings.SERVER_STATUS_URL:
-        status_button_list.append(
+        builder.row(
             InlineKeyboardButton(text=_(key="menu_server_status_button"),
                                  url=settings.SERVER_STATUS_URL))
-
-    if status_button_list:
-        builder.row(language_button, *status_button_list)
-    else:
-        builder.row(language_button)
 
     if settings.SUPPORT_LINK:
         builder.row(
@@ -60,21 +54,6 @@ def get_main_menu_inline_keyboard(
             InlineKeyboardButton(text=_(key="menu_terms_button"),
                                  url=settings.TERMS_OF_SERVICE_URL))
 
-    return builder.as_markup()
-
-
-def get_language_selection_keyboard(i18n_instance,
-                                    current_lang: str) -> InlineKeyboardMarkup:
-    _ = lambda key, **kwargs: i18n_instance.gettext(current_lang, key, **kwargs
-                                                    )
-    builder = InlineKeyboardBuilder()
-    builder.button(text=f"🇬🇧 English {'✅' if current_lang == 'en' else ''}",
-                   callback_data="set_lang_en")
-    builder.button(text=f"🇷🇺 Русский {'✅' if current_lang == 'ru' else ''}",
-                   callback_data="set_lang_ru")
-    builder.button(text=_(key="back_to_main_menu_button"),
-                   callback_data="main_action:back_to_main")
-    builder.adjust(1)
     return builder.as_markup()
 
 

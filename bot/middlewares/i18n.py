@@ -45,6 +45,7 @@ class JsonI18n:
                         exc_info=True)
 
     def gettext(self, lang_code: Optional[str], key: str, **kwargs) -> str:
+        lang_code = self.default_lang  # Russian only: ignore per-user language
         # Determine effective language with robust fallback
         if lang_code and lang_code in self.locales_data:
             effective_lang_code = lang_code
@@ -131,37 +132,8 @@ class I18nMiddleware(BaseMiddleware):
     async def __call__(self, handler: Callable[[Update, Dict[str, Any]],
                                                Awaitable[Any]], event: Update,
                        data: Dict[str, Any]) -> Any:
-        session: AsyncSession = data["session"]
-        event_user: Optional[User] = data.get("event_from_user")
-
+        # Russian only: language choice removed from the bot.
         current_language = self.i18n.default_lang
-
-        if event_user:
-            try:
-                user_db_model = await user_dal.get_user_by_id(
-                    session, event_user.id)
-                if user_db_model and user_db_model.language_code and user_db_model.language_code in self.i18n.locales_data:
-                    current_language = user_db_model.language_code
-                elif event_user.language_code:
-                    lang_prefix = event_user.language_code.split(
-                        '-')[0].lower()
-                    if lang_prefix in self.i18n.locales_data:
-                        current_language = lang_prefix
-                    elif event_user.language_code.lower(
-                    ) in self.i18n.locales_data:
-                        current_language = event_user.language_code.lower()
-            except Exception as e_db_lang:
-                logging.error(
-                    f"I18nMiddleware: Error fetching user lang from DB for {event_user.id}: {e_db_lang}. Falling back.",
-                    exc_info=True)
-                if event_user.language_code:
-                    lang_prefix = event_user.language_code.split(
-                        '-')[0].lower()
-                    if lang_prefix in self.i18n.locales_data:
-                        current_language = lang_prefix
-                    elif event_user.language_code.lower(
-                    ) in self.i18n.locales_data:
-                        current_language = event_user.language_code.lower()
 
         data["i18n_data"] = {
             "i18n_instance": self.i18n,
