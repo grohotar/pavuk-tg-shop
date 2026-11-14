@@ -7,23 +7,23 @@ that text gets the icon, wherever it is built. Unknown texts are left alone.
 from aiogram.client.session.middlewares.base import BaseRequestMiddleware
 
 ICONS = {  # locale key -> custom_emoji_id
-    "menu_subscribe_inline": "5458895092389555704",        # buy, pink: separate non-adaptive set pipun_accent_by_ppntestbot
-    "menu_my_subscription_inline": "5460929596922832051",  # subscription (key)
-    "menu_referral_inline": "5458425996061487243",         # referral (gift)
-    "referral_share_message_button": "5458917619493023300",  # paper plane
-    "menu_server_status_button": "5458738768464884652",    # servers
-    "menu_support_button": "5458708226952440112",          # support
-    "menu_terms_button": "5458450417245532282",            # documents
-    "connect_button": "5458511371421397481",               # connect
-    "renew_subscription_button": "5458396025779694464",    # extend
-    "renew_short_button": "5458396025779694464",
-    "pay_with_platega_button": "5458436832263976001",      # SBP QR
-    "pay_with_platega_card_button": "5458626094292837850", # card
-    "pay_button": "5458920681804703553",                   # pay
-    "back_to_main_menu_button": "5458437283235538631",     # back
-    "back_to_payment_methods_button": "5458437283235538631",
-    "back_to_autopay_method_choice_button": "5458437283235538631",
-    "cancel_button": "5461117720785365933",                # cancel
+    "menu_subscribe_inline": "5460847958184475262",        # buy, pink: separate non-adaptive set pipun_accent_by_ppntestbot
+    "menu_my_subscription_inline": "5458836753848771681",  # subscription (key)
+    "menu_referral_inline": "5460861165208907427",         # referral (gift)
+    "referral_share_message_button": "5458728125535922865",  # paper plane
+    "menu_server_status_button": "5458446955501889989",    # servers
+    "menu_support_button": "5461163990468045498",          # support
+    "menu_terms_button": "5458474516307028687",            # documents
+    "connect_button": "5458530200558026384",               # connect
+    "renew_subscription_button": "5458690639061366368",    # extend
+    "renew_short_button": "5458690639061366368",
+    "pay_with_platega_button": "5458392473841737822",      # SBP QR
+    "pay_with_platega_card_button": "5461168006262464113", # card
+    "pay_button": "5458768128861317632",                   # pay
+    "back_to_main_menu_button": "5458389789487177592",     # back
+    "back_to_payment_methods_button": "5458389789487177592",
+    "back_to_autopay_method_choice_button": "5458389789487177592",
+    "cancel_button": "5458694491647028850",                # cancel
 }
 
 
