@@ -389,7 +389,8 @@ class PlategaService:
                 order_id=transaction_id,
                 date=datetime.now().strftime("%Y-%m-%d"),
             )
-            text = f"{order_info_text}\n{text}"
+            if order_info_text:
+                text = f"{order_info_text}\n{text}"
 
             markup = get_connect_and_main_keyboard(
                 lang,

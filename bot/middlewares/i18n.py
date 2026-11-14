@@ -1,3 +1,4 @@
+import re
 import logging
 import json
 import os
@@ -9,6 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.dal import user_dal
 from config.settings import Settings
+
+
+_ISO_DATE = re.compile(r"^(\d{4})-(\d{2})-(\d{2})(?=$| \d{2}:\d{2}$)")
 
 
 class JsonI18n:
@@ -46,6 +50,9 @@ class JsonI18n:
 
     def gettext(self, lang_code: Optional[str], key: str, **kwargs) -> str:
         lang_code = self.default_lang  # Russian only: ignore per-user language
+        # Show dates as DD.MM.YYYY in every text: callers pass "YYYY-MM-DD" (optionally " HH:MM").
+        kwargs = {k: _ISO_DATE.sub(r"\3.\2.\1", v) if isinstance(v, str) else v
+                  for k, v in kwargs.items()}
         # Determine effective language with robust fallback
         if lang_code and lang_code in self.locales_data:
             effective_lang_code = lang_code
