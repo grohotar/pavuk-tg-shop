@@ -45,7 +45,7 @@ async def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--campaign", default="winback-2026-11")
     ap.add_argument("--pct", type=int, default=50)
-    ap.add_argument("--months", default="1,3")
+    ap.add_argument("--months", default="1,3,6,12")
     ap.add_argument("--days", type=int, default=14, help="offer valid for N days")
     ap.add_argument("--min-days", type=int, default=30, help="subscription ended at least N days ago")
     ap.add_argument("--max-days", type=int, default=180, help="... and at most N days ago")

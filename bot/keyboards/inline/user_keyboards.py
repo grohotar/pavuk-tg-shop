@@ -75,6 +75,8 @@ def get_subscription_options_keyboard(subscription_options: Dict[
     builder = InlineKeyboardBuilder()
     if subscription_options:
         for months, price in subscription_options.items():
+            if offer_months and months == 0 and 0 not in offer_months:
+                continue  # personal offer: the week would cost more than a discounted month
             if price is not None:
                 # Format button text with discounts and emoji
                 if months == 0:
