@@ -292,6 +292,9 @@ async def run_bot(settings_param: Settings):
             if u:
                 logging.info(f"SANDBOX: ignored update from {u.id} @{u.username}")
 
+        if os.getenv("PLATEGA_API_BASE_URL"):  # sandbox fake Platega: pull its callbacks (sandbox/ is not in the prod image)
+            from sandbox.platega_events import poll
+            asyncio.create_task(poll(services["platega_service"]))
         logging.info("Starting bot in POLLING mode (sandbox, admins only)...")
         await dp.start_polling(bot)
         return

@@ -204,22 +204,22 @@ const server = http.createServer(async (req, res) => {
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
             return res.end(html)
         }
-        // ---- fake Platega (PLATEGA_API_BASE_URL points here): payment link leads to a stub page ----
-        if (p.startsWith('/transaction/')) {
+        // ---- fake Platega (PLATEGA_API_BASE_URL points here) ----
+        if (p.startsWith('/transaction/') || p.startsWith('/subscription/') || p === '/sandbox/platega-events') {
             if (KEY && req.headers['x-secret'] !== KEY) { res.writeHead(401); return res.end('{}') }
             let raw = ''
             for await (const c of req) raw += c
-            const id = crypto.randomUUID()
-            const out = req.method === 'POST'
-                ? { transactionId: id, status: 'PENDING', redirect: `${PUBLIC_URL}/pay/${id}?sum=${encodeURIComponent(JSON.parse(raw || '{}').paymentDetails?.amount ?? '')}` }
-                : { id: p.split('/')[2], status: 'PENDING' }
-            res.writeHead(200, { 'Content-Type': 'application/json' })
+            const [st, out] = plategaApi(req.method, p, raw ? JSON.parse(raw) : {})
+            res.writeHead(st, { 'Content-Type': 'application/json' })
             return res.end(JSON.stringify(out))
         }
-        if (p.startsWith('/pay/')) {
+        if (p.startsWith('/pay/') || p === '/platega') {
+            let raw = ''
+            for await (const c of req) raw += c
+            const form = Object.fromEntries(new URLSearchParams(raw))
+            if (p === '/platega' && KEY && url.searchParams.get('key') !== KEY) { res.writeHead(403); return res.end('forbidden') }
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
-            return res.end(`<meta charset=utf-8><meta name=viewport content="width=device-width"><body style="font:16px sans-serif;padding:24px">` +
-                `<h3>Тестовая оплата</h3><p>Песочница: ${url.searchParams.get('sum') || ''} ₽, ничего не списывается и подписка не выдаётся.</p>`)
+            return res.end(plategaPage(req.method, p, form, url))
         }
         if (p.startsWith('/sub/')) { res.writeHead(200, { 'Content-Type': 'text/plain' }); return res.end('sandbox: fake subscription, no real servers here\n') }
         if (KEY && req.headers.authorization !== `Bearer ${KEY}`) {
@@ -237,6 +237,109 @@ const server = http.createServer(async (req, res) => {
         res.end(JSON.stringify({ message: String(e) }))
     }
 })
+
+// ---------- fake Platega: payments, autopay subscriptions, callbacks queue ----------
+// Callbacks go to a queue; the sandbox bot (polling mode) pulls GET /sandbox/platega-events every 2 s
+// and feeds them to PlategaService.process_callback, the same code the prod webhook runs.
+const PG = { tx: {}, subs: {}, events: [] }
+const addMonths = (d, m) => { const x = new Date(d); x.setUTCMonth(x.getUTCMonth() + m); return x.toISOString() }
+function pgEvent(e) { PG.events.push(Object.fromEntries(Object.entries(e).filter(([, v]) => v !== undefined))) }
+function pgCharge(sub, ok) {
+    const id = crypto.randomUUID()
+    if (ok) {
+        sub.nextChargeAt = addMonths(sub.nextChargeAt || nowIso(), sub.months)
+        pgEvent({ id, amount: sub.amount, currency: 'RUB', status: 'CONFIRMED', paymentMethod: 6, payload: sub.payload,
+            subscriptionId: sub.id, nextChargeAt: sub.nextChargeAt })
+    } else {
+        sub.status = 'PastDue'
+        pgEvent({ id, amount: sub.amount, currency: 'RUB', status: 'CANCELED', paymentMethod: 6, payload: sub.payload, subscriptionId: sub.id })
+        pgEvent({ id: sub.id, amount: sub.amount, currency: 'RUB', status: 'SUBSCRIPTION_PAST_DUE', payload: sub.payload, subscriptionId: sub.id })
+    }
+}
+function plategaApi(method, p, body) {
+    if (p === '/sandbox/platega-events') { const e = PG.events; PG.events = []; return [200, e] }
+    if (method === 'POST' && p === '/transaction/process') {
+        const id = crypto.randomUUID(), d = body.paymentDetails || {}
+        if (body.paymentMethod === 6) {
+            PG.subs[id] = { id, amount: +d.amount, months: +d.intervalCount || 1, status: 'PendingAgreement', payload: body.payload || '',
+                description: body.description || 'Пополнение', nextChargeAt: null }
+            return [200, { paymentMethod: 'Subscription', transactionId: id, redirect: `${PUBLIC_URL}/pay/sub/${id}`, status: 'PENDING' }]
+        }
+        PG.tx[id] = { id, amount: +d.amount, method: body.paymentMethod, payload: body.payload || '', status: 'PENDING' }
+        return [200, { transactionId: id, status: 'PENDING', redirect: `${PUBLIC_URL}/pay/${id}`, expiresIn: '00:15:00' }]
+    }
+    let m = p.match(/^\/transaction\/([\w-]+)$/)
+    if (m) return PG.tx[m[1]] ? [200, { id: m[1], status: PG.tx[m[1]].status, payload: PG.tx[m[1]].payload }] : [404, { message: 'Transaction not found.' }]
+    m = p.match(/^\/subscription\/([\w-]+)\/cancel$/)
+    if (m && method === 'POST') {
+        const sub = PG.subs[m[1]]
+        if (!sub) return [404, { message: 'not found' }]
+        if (sub.status !== 'Cancelled') {
+            sub.status = 'Cancelled'
+            pgEvent({ id: sub.id, amount: sub.amount, currency: 'RUB', status: 'SUBSCRIPTION_CANCELLED', payload: sub.payload, subscriptionId: sub.id })
+        }
+        return [200, { subscriptionId: sub.id, status: 'cancelled' }]
+    }
+    m = p.match(/^\/subscription\/([\w-]+)$/)
+    if (m) return PG.subs[m[1]] ? [200, PG.subs[m[1]]] : [404, { message: 'not found' }]
+    return [404, { message: 'unknown' }]
+}
+const PAGE = (body) => `<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">` +
+    `<body style="font:16px -apple-system,sans-serif;max-width:440px;margin:24px auto;padding:0 16px;color:#222">` +
+    `<p style="color:#b00;font-size:13px">Песочница: это имитация Platega, деньги не списываются.</p>${body}</body>`
+const BTN = (label, name, color = '#2f6fed') =>
+    `<button name=act value=${name} style="display:block;width:100%;padding:14px;margin:8px 0;border:0;border-radius:10px;background:${color};color:#fff;font-size:16px">${label}</button>`
+const DONE = PAGE('<h3>Готово</h3><p>Вернитесь в Telegram — бот пришлёт сообщение через пару секунд.</p>')
+function plategaPage(method, p, form, url) {
+    let m = p.match(/^\/pay\/sub\/([\w-]+)$/)
+    if (m) {
+        const sub = PG.subs[m[1]]
+        if (!sub) return PAGE('<h3>Подписка не найдена</h3><p>Песочница перезапускалась — оформите заново в боте.</p>')
+        if (method === 'POST' && sub.status === 'PendingAgreement') {
+            sub.status = 'Active'
+            pgEvent({ id: sub.id, amount: sub.amount, currency: 'RUB', status: 'SUBSCRIPTION_ACTIVATED', payload: sub.payload,
+                subscriptionId: sub.id, nextChargeAt: addMonths(nowIso(), sub.months) })
+            pgCharge(sub, true)
+            return DONE
+        }
+        if (sub.status !== 'PendingAgreement') return PAGE('<h3>Подписка уже оформлена</h3>')
+        const every = sub.months === 1 ? 'раз в месяц' : `раз в ${sub.months} мес.`
+        return PAGE(`<h3>Оформить подписку</h3><p style="color:#666">Мерчант: Pipun VPN · ${sub.description}</p>` +
+            `<p><b>${sub.amount} ₽</b> ${every}, автоматическое продление</p><form method=post>` +
+            `<input name=email type=email required placeholder="Email *" style="width:100%;padding:12px;font-size:16px;box-sizing:border-box">` +
+            `<label style="display:block;margin:12px 0"><input type=checkbox required> Соглашаюсь на автоматические списания ${sub.amount} ₽ ${every}.</label>` +
+            BTN('Оформить подписку', 'ok') + '</form>')
+    }
+    m = p.match(/^\/pay\/([\w-]+)$/)
+    if (m) {
+        const tx = PG.tx[m[1]]
+        if (!tx) return PAGE('<h3>Платёж не найден</h3><p>Песочница перезапускалась — создайте платёж заново в боте.</p>')
+        if (method === 'POST' && tx.status === 'PENDING') {
+            tx.status = form.act === 'ok' ? 'CONFIRMED' : 'CANCELED'
+            pgEvent({ id: tx.id, amount: tx.amount, currency: 'RUB', status: tx.status, paymentMethod: tx.method, payload: tx.payload })
+            return DONE
+        }
+        if (tx.status !== 'PENDING') return PAGE(`<h3>Платёж уже ${tx.status === 'CONFIRMED' ? 'оплачен' : 'отменён'}</h3>`)
+        return PAGE(`<h3>Оплата ${tx.amount} ₽</h3><p>${tx.method === 11 ? 'Карта МИР' : 'СБП (QR-код)'}</p><form method=post>` +
+            BTN(`Оплатить ${tx.amount} ₽`, 'ok') + BTN('Отказаться', 'no', '#888') + '</form>')
+    }
+    // /platega?key=… : sandbox control page for autopay subscriptions
+    const sub = PG.subs[form.id]
+    if (method === 'POST' && sub) {
+        if (form.act === 'charge' && sub.status !== 'Cancelled') { sub.status = 'Active'; pgCharge(sub, true) }
+        if (form.act === 'fail' && sub.status !== 'Cancelled') pgCharge(sub, false)
+        if (form.act === 'cancel' && sub.status !== 'Cancelled') {
+            sub.status = 'Cancelled'
+            pgEvent({ id: sub.id, amount: sub.amount, currency: 'RUB', status: 'SUBSCRIPTION_CANCELLED', payload: sub.payload, subscriptionId: sub.id })
+        }
+    }
+    const rows = Object.values(PG.subs).reverse().map((s) => `<div style="border:1px solid #ddd;border-radius:10px;padding:12px;margin:12px 0">` +
+        `<b>${s.amount} ₽ / ${s.months} мес.</b> · ${s.status}<br><small>${s.payload}<br>следующее списание: ${s.nextChargeAt || '—'}</small>` +
+        (s.status === 'Cancelled' || s.status === 'PendingAgreement' ? '' : `<form method=post><input type=hidden name=id value=${s.id}>` +
+            BTN('Следующее списание (успешно)', 'charge') + BTN('Списание не прошло', 'fail', '#c77700') + BTN('Клиент отменил в банке', 'cancel', '#b00') + '</form>') +
+        '</div>').join('')
+    return PAGE(`<h3>Автопродления (Platega)</h3>${rows || '<p>Пока нет. Оформите в боте: Купить → срок → СБП с автопродлением.</p>'}`)
+}
 
 function start() {
     const port = +(process.env.APP_PORT || 3999), host = process.env.APP_IP || '127.0.0.1'
