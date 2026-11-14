@@ -9,8 +9,8 @@ from aiogram.client.session.middlewares.base import BaseRequestMiddleware
 ICONS = {  # locale key -> custom_emoji_id
     "menu_subscribe_inline": "5458895092389555704",        # buy, pink: separate non-adaptive set pipun_accent_by_ppntestbot
     "menu_my_subscription_inline": "5460929596922832051",  # subscription (key)
-    "menu_referral_inline": "5458917619493023300",         # referral (paper plane)
-    "referral_share_message_button": "5458917619493023300",
+    "menu_referral_inline": "5458425996061487243",         # referral (gift)
+    "referral_share_message_button": "5458917619493023300",  # paper plane
     "menu_server_status_button": "5458738768464884652",    # servers
     "menu_support_button": "5458708226952440112",          # support
     "menu_terms_button": "5458450417245532282",            # documents
