@@ -164,12 +164,12 @@
   "admin_promo_invalid_max_activations": "Максимальное количество активаций должно быть положительным числом.",
   "admin_promo_invalid_validity_days": "Срок действия промокода (в днях) должен быть положительным числом.",
   "admin_promo_created_success": "✅ Промокод <code>{code}</code> успешно создан!\nБонус: {bonus_days} дней\nМакс. активаций: {max_activations}\nДействителен: {valid_until_str}",
-  "subscription_72h_notification": "👋 Привет, {user_name}!\n\n⏳ Ваша подписка на VPN истекает через 3 дня — {end_date}.\n\nПродлите её по кнопке ниже.",
-  "subscription_48h_notification": "👋 Привет, {user_name}!\n\n⏳ Ваша подписка на VPN истекает через 2 дня — {end_date}.\n\nПродлите её по кнопке ниже.",
-  "subscription_24h_notification": "👋 Привет, {user_name}!\n\n⏳ Ваша подписка на VPN истекает через 1 день — {end_date}.\n\nПродлите её по кнопке ниже.",
-  "subscription_expired_notification": "👋 Привет, {user_name}!\n\n⛔ Срок вашей подписки на VPN истек ({end_date}).\n\nПродлите её по кнопке ниже.",
-  "subscription_expired_yesterday_notification": "👋 Привет, {user_name}!\n\n⏳ Ваша подписка на VPN истекла сутки назад ({end_date}).\n\nПродлите её по кнопке ниже.",
-  "autorenew_48h_charge_tomorrow_notice": "🔔 Напоминание\n\nЗавтра будет автоматическое списание за продление подписки. Если вы не хотите автопродление — отключите его кнопкой ниже.",
+  "subscription_72h_notification": "<b>Подписка заканчивается через 3 дня</b>\nДоступ к VPN действует до {end_date}. Продлите подписку заранее, чтобы не прерывалось соединение.",
+  "subscription_48h_notification": "<b>Подписка заканчивается через 2 дня</b>\nДоступ к VPN действует до {end_date}. Продлите подписку заранее, чтобы не прерывалось соединение.",
+  "subscription_24h_notification": "<b>Подписка заканчивается завтра</b>\nДоступ к VPN действует до {end_date}. Продлите подписку заранее, чтобы не прерывалось соединение.",
+  "subscription_expired_notification": "<b>Подписка закончилась</b>\nДоступ к VPN приостановлен {end_date}. Продлите подписку, чтобы снова подключиться — настройки в приложении менять не нужно.",
+  "subscription_expired_yesterday_notification": "<b>Доступ к VPN приостановлен</b>\nПодписка закончилась вчера, {end_date}. После продления VPN снова заработает с прежними настройками в приложении.",
+  "autorenew_48h_charge_tomorrow_notice": "<b>Завтра — автопродление подписки</b>\nОплата спишется автоматически. Если продлевать не нужно, отключите автопродление кнопкой ниже.",
   "autorenew_confirm_enable": "🔄 Включить автопродление? Перед окончанием подписки будет выполняться автосписание.",
   "autorenew_confirm_disable": "🛑 Отключить автопродление? Автосписаний больше не будет.",
   "tribute_subscription_cancelled": "🚨 <b>Подписка отменена</b>\n\nВаша подписка Tribute была отменена. У вас есть 24 часа для восстановления доступа, после чего подписка будет заблокирована.\n\nДля продления подписки нажмите кнопку ниже.",
@@ -490,5 +490,6 @@
   "admin_platega_month_label": "За месяц",
   "admin_platega_all_time_label": "За все время",
   "referral_bonus_you": "вам <b>+{days} дн.</b>",
-  "referral_bonus_friend": "другу <b>+{days} дн.</b>"
+  "referral_bonus_friend": "другу <b>+{days} дн.</b>",
+  "renew_subscription_button": "Продлить подписку"
 }

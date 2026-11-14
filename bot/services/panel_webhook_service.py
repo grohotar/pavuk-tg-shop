@@ -14,6 +14,11 @@ from bot.keyboards.inline.user_keyboards import get_subscribe_only_markup, get_a
 from db.dal import user_dal
 from bot.utils.date_utils import add_months
 
+def _ddmmyyyy(iso: Optional[str]) -> str:
+    """'2026-09-22T...' -> '22.09.2026'."""
+    return ".".join(reversed(iso[:10].split("-"))) if iso else ""
+
+
 EVENT_MAP = {
     "user.expires_in_72_hours": (3, "subscription_72h_notification"),
     "user.expires_in_48_hours": (2, "subscription_48h_notification"),
@@ -211,7 +216,7 @@ class PanelWebhookService:
                         async with self.async_session_factory() as session:
                             from db.dal import subscription_dal
                             sub = await subscription_dal.get_active_subscription_by_user_id(session, user_id)
-                            if sub and sub.auto_renew_enabled and sub.provider != 'tribute':
+                            if sub and sub.auto_renew_enabled and sub.provider != 'tribute' and self.settings.YOOKASSA_AUTOPAYMENTS_ENABLED:
                                 try:
                                     ok = await subscription_service.charge_subscription_renewal(session, sub)
                                     # If initiation succeeded, suppress the 24h reminder by returning early
@@ -238,7 +243,7 @@ class PanelWebhookService:
                             getattr(sub, 'auto_renew_enabled', None) if sub else None,
                             getattr(sub, 'provider', None) if sub else None,
                         )
-                        if sub and sub.auto_renew_enabled and sub.provider != 'tribute':
+                        if sub and sub.auto_renew_enabled and sub.provider != 'tribute' and self.settings.YOOKASSA_AUTOPAYMENTS_ENABLED:
                             cancel_kb = get_autorenew_cancel_keyboard(lang, self.i18n)
                             await self._send_message(
                                 user_id,
@@ -254,7 +259,7 @@ class PanelWebhookService:
                     msg_key,
                     reply_markup=markup,
                     user_name=first_name,
-                    end_date=user_payload.get("expireAt", "")[:10],
+                    end_date=_ddmmyyyy(user_payload.get("expireAt")),
                 )
         elif event_name == "user.expired":
             # Check if this is a tribute user that should be auto-renewed (regardless of notification settings)
@@ -269,7 +274,7 @@ class PanelWebhookService:
                     "subscription_expired_notification",
                     reply_markup=markup,
                     user_name=first_name,
-                    end_date=user_payload.get("expireAt", "")[:10],
+                    end_date=_ddmmyyyy(user_payload.get("expireAt")),
                 )
         elif event_name == "user.expired_24_hours_ago" and self.settings.SUBSCRIPTION_NOTIFY_AFTER_EXPIRE:
             await self._send_message(
@@ -278,7 +283,7 @@ class PanelWebhookService:
                 "subscription_expired_yesterday_notification",
                 reply_markup=markup,
                 user_name=first_name,
-                end_date=user_payload.get("expireAt", "")[:10],
+                end_date=_ddmmyyyy(user_payload.get("expireAt")),
             )
 
     async def handle_webhook(self, raw_body: bytes, signature_header: Optional[str]) -> web.Response:

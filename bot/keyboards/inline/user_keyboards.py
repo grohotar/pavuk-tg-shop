@@ -266,7 +266,7 @@ def get_back_to_main_menu_markup(lang: str,
 def get_subscribe_only_markup(lang: str, i18n_instance) -> InlineKeyboardMarkup:
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
     builder = InlineKeyboardBuilder()
-    builder.button(text=_(key="menu_subscribe_inline"),
+    builder.button(text=_(key="renew_subscription_button"),
                    callback_data="main_action:subscribe")
     return builder.as_markup()
 
