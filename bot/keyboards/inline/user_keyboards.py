@@ -68,6 +68,9 @@ def get_subscription_options_keyboard(subscription_options: Dict[
     int, Optional[int]], currency_symbol_val: str, lang: str,
                                       i18n_instance) -> InlineKeyboardMarkup:
     _ = lambda key, **kwargs: i18n_instance.gettext(lang, key, **kwargs)
+    # Display only: DEFAULT_CURRENCY_SYMBOL is also sent to payment providers as a currency code.
+    if currency_symbol_val == "RUB":
+        currency_symbol_val = "₽"
     builder = InlineKeyboardBuilder()
     if subscription_options:
         for months, price in subscription_options.items():
